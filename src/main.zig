@@ -21,7 +21,7 @@ pub fn main() !void {
 
     // start up thread pool
     var thread_pool: std.Thread.Pool = undefined;
-    try thread_pool.init(.{ .allocator = gpa, .n_jobs = 6 });
+    try thread_pool.init(.{ .allocator = gpa, .n_jobs = 12 });
     defer thread_pool.deinit();
 
     while (true) {
@@ -30,15 +30,21 @@ pub fn main() !void {
     }
 }
 
+const s = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 11\n\nhello world";
 fn handleConnection(conn: std.net.StreamServer.Connection) void {
-    const msg = "hello\n";
-    _ = msg;
-    _ = conn.stream.write("hello\n") catch |err| switch (err) {
-        else => {
-            return;
-        },
+    // const msg = "hello\n";
+    // _ = msg;
+
+    _ = conn.stream.write(s) catch |err| {
+        // _ = err;
+        std.debug.print("{any}", .{err});
+        // };
+        // switch (err) {
+        // else => {
+        //     return;
+        // },
     };
+    conn.stream.close();
     return;
     // _ = try conn.stream.write(msg);
-    // conn.stream.close();
 }

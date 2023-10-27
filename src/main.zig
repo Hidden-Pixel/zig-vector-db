@@ -10,6 +10,7 @@ pub fn main() !void {
     var opts: std.net.StreamServer.Options = std.net.StreamServer.Options{
         .reuse_address = true,
     };
+
     var server: std.net.StreamServer = std.net.StreamServer.init(opts);
     defer server.deinit();
 
@@ -25,13 +26,7 @@ pub fn main() !void {
 
     while (true) {
         var conn = try server.accept();
-        // _ = try thread_pool.spawn(handleConnection, .{conn});
-        // _ = try std.Thread.spawn(.{}, handleConnection, .{conn});
-        // std.debug.print("accepted\n", .{});
         try thread_pool.spawn(handleConnection, .{conn});
-        // const s = "hello\n";
-        // _ = try conn.stream.write(s);
-        // conn.stream.close();
     }
 }
 
@@ -39,7 +34,9 @@ fn handleConnection(conn: std.net.StreamServer.Connection) void {
     const msg = "hello\n";
     _ = msg;
     _ = conn.stream.write("hello\n") catch |err| switch (err) {
-        else => {},
+        else => {
+            return;
+        },
     };
     return;
     // _ = try conn.stream.write(msg);

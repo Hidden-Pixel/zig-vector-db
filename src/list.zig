@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn Queue(comptime T: type) type {
+pub fn LinkedList(comptime T: type) type {
     return struct {
         const This = @This();
         const Node = struct {
@@ -21,7 +21,7 @@ pub fn Queue(comptime T: type) type {
         }
 
         // Enqueues 'data' onto the queue.
-        pub fn enqueue(self: *This, data: T) !void {
+        pub fn add(self: *This, data: T) !void {
             const new_node = try self.allocator.create(Node);
             new_node.* = Node{ .data = data, .next = null };
 
@@ -57,43 +57,26 @@ pub fn Queue(comptime T: type) type {
             return head.data;
         }
 
-        pub fn print(self: *This, depth: usize) void {
-            var idx: usize = 1;
-            var current_node = self.head;
-            std.debug.print("\n", .{});
-            while (current_node) |node| {
-                std.debug.print("idx={d} value={any}\n", .{ idx, node.data });
-                current_node = node.next;
-                idx = idx + 1;
-                if (idx > depth) return;
+        pub fn removeAll(self: *This) void {
+            var current_node: ?*Node = self.head;
+            while (current_node) |i| {
+                current_node = i.next;
+
+                self.allocator.destroy(i);
             }
+            self.head = null;
         }
+
+        // pub fn print(self: *This, depth: usize) void {
+        //     var idx: usize = 1;
+        //     var current_node = self.head;
+        //     std.debug.print("\n", .{});
+        //     while (current_node) |node| {
+        //         std.debug.print("idx={d} value={any}\n", .{ idx, node.data });
+        //         current_node = node.next;
+        //         idx = idx + 1;
+        //         if (idx > depth) return;
+        //     }
+        // }
     };
-}
-
-test "queue init" {
-    var mem_arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer mem_arena.deinit();
-    var allocator = mem_arena.allocator();
-    var q = Queue(u8).init(&allocator);
-    _ = try q.enqueue(1);
-    _ = try q.enqueue(2);
-    _ = q.print(100);
-    var val: ?u8 = q.dequeue();
-    _ = q.print(100);
-    val = q.dequeue();
-
-    _ = q.print(100);
-}
-
-test "queue loop" {
-    var mem_arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer mem_arena.deinit();
-    var allocator = mem_arena.allocator();
-
-    var q = Queue(usize).init(&allocator);
-    for (0..100000) |i| {
-        _ = try q.enqueue(i);
-        // _ = try std.debug.print("{d}\n", .{i});
-    }
 }

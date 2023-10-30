@@ -12,7 +12,6 @@ pub const message_header = struct {
     message_contents: []u8,
 };
 
-pub fn 
 test "message envelope" {
     var x = [_]u8{ 1, 2, 3, 4 };
     var my_struct = message_body{ .queue_name = "hello", .data = &x };

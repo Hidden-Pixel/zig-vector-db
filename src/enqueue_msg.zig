@@ -2,7 +2,7 @@ const std = @import("std");
 
 const ENQUEUE_MSG_TYPE: u8 = 1;
 
-pub const message_payload = struct {
+pub const message_body = struct {
     queue_name: []const u8,
     data: []u8,
 };
@@ -12,9 +12,10 @@ pub const message_header = struct {
     message_contents: []u8,
 };
 
+pub fn 
 test "message envelope" {
     var x = [_]u8{ 1, 2, 3, 4 };
-    var my_struct = message_payload{ .queue_name = "hello", .data = &x };
+    var my_struct = message_body{ .queue_name = "hello", .data = &x };
     var msg = std.mem.asBytes(&my_struct);
 
     var env = message_header{ .message_type = 1, .message_contents = msg };
@@ -32,7 +33,7 @@ test "message envelope" {
     std.debug.print("env msg type {d}\n", .{rec.message_type});
     std.debug.print("msg content {any}\n", .{rec.message_contents});
 
-    const payload_recv: *message_payload = @ptrCast(@alignCast(rec.message_contents));
+    const payload_recv: *message_body = @ptrCast(@alignCast(rec.message_contents));
     std.debug.print("payload q name {s}\n", .{payload_recv.queue_name});
 
     // std.debug.print("{any}\n", .{mystruct});

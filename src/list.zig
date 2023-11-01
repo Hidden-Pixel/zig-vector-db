@@ -6,6 +6,7 @@ pub fn LinkedList(comptime T: type) type {
         const Node = struct {
             data: T,
             next: ?*Node,
+            key: []const u8,
         };
 
         allocator: *std.mem.Allocator,
@@ -21,9 +22,9 @@ pub fn LinkedList(comptime T: type) type {
         }
 
         // Enqueues 'data' onto the queue.
-        pub fn add(self: *This, data: T) !void {
+        pub fn add(self: *This, data: T, meta: []const u8) !void {
             const new_node = try self.allocator.create(Node);
-            new_node.* = Node{ .data = data, .next = null };
+            new_node.* = Node{ .data = data, .next = null, .key = meta };
 
             // if the tail is not null, then make the current tail
             // point to the new node we are adding.

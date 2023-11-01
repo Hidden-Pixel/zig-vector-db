@@ -1,5 +1,5 @@
 const std = @import("std");
-const queue = @import("queue.zig");
+const queue = @import("list.zig");
 
 const port_num = 3000;
 
@@ -30,21 +30,27 @@ pub fn main() !void {
     }
 }
 
-const s = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 11\n\nhello world";
+// const s = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 11\n\nhello world";
 fn handleConnection(conn: std.net.StreamServer.Connection) void {
-    // const msg = "hello\n";
-    // _ = msg;
+    std.debug.print("in handle conn \n", .{});
+    var y: i32 = 1000;
+    _ = y;
+    var buf: [1024]u8 = undefined;
 
-    _ = conn.stream.write(s) catch |err| {
-        // _ = err;
-        std.debug.print("{any}", .{err});
-        // };
-        // switch (err) {
-        // else => {
-        //     return;
-        // },
+    _ = conn.stream.read(&buf) catch |err| {
+        std.debug.print("err", .{err});
     };
+
+    //     catch |err| {
+    //     std.debug.print("err {any}", .{err});
+    // };
+    // _ = bytes_read;
+    std.debug.print("read in {s}", .{buf});
+
+    // _ = conn.stream.write("hello") catch |err| {
+    //     std.debug.print("{any}", .{err});
+    // };
     conn.stream.close();
+    std.debug.print("closing connection\n", .{});
     return;
-    // _ = try conn.stream.write(msg);
 }

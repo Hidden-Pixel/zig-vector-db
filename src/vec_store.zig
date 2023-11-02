@@ -55,32 +55,76 @@ test "dot product" {
     var dot_product = v.dotProduct(v1, v2);
     try std.testing.expect(dot_product == 32);
 }
-//
-// test "magnitude" {
-//     var test_allocator = std.testing.allocator;
-//     var v1: @Vector(2, f32) = @Vector(2, f32){ 2, 7 };
-//     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
-//     var magnitude = v.magnitude(v1);
-//     try std.testing.expect(7.280109889280518e+00 == magnitude);
-// }
-//
-// test "cosine" {
-//     var test_allocator = std.testing.allocator;
-//     var v1: @Vector(3, f32) = @Vector(3, f32){ 1, 2, 3 };
-//     var v2: @Vector(3, f32) = @Vector(3, f32){ 4, 5, 6 };
-//     var v = VecStore(@Vector(3, f32)).init(&test_allocator);
-//     var cosine = v.cosineSim(v1, v2);
-//     try std.testing.expect(cosine == 0.9746318461970762);
-// }
-//
-test "walk" {
+
+test "magnitude" {
+    var test_allocator = std.testing.allocator;
+    var v1: @Vector(2, f32) = @Vector(2, f32){ 2, 7 };
+    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
+    var magnitude = v.magnitude(v1);
+    _ = magnitude;
+    // try std.testing.expect(7.280109889280518e+00 == magnitude);
+}
+
+test "cosine" {
+    var test_allocator = std.testing.allocator;
+    var v1: @Vector(3, f32) = @Vector(3, f32){ 1, 2, 3 };
+    var v2: @Vector(3, f32) = @Vector(3, f32){ 4, 5, 6 };
+    var v = VecStore(@Vector(3, f32)).init(&test_allocator);
+    var cosine = v.cosineSim(v1, v2);
+    _ = cosine;
+    // try std.testing.expect(cosine == 0.9746318461970762);
+}
+
+test "best match" {
     var test_allocator = std.testing.allocator;
     var v1: @Vector(3, f32) = @Vector(3, f32){ 1, 2, 3 };
     var v2: @Vector(3, f32) = @Vector(3, f32){ 4, 5, 6 };
     var v = VecStore(@Vector(3, f32)).init(&test_allocator);
     try v.add(v1, "some meta data");
     var best_match = v.get_best_match(v2);
-    std.debug.print("best match {d}\n", .{best_match});
+    _ = best_match;
+    // std.debug.print("best match {d}\n", .{best_match});
     // try std.testing.expect(best_match == 0.9746318461970762);
     v.vectors.removeAll();
+}
+
+fn generateRandomVectorf64(comptime n: usize) [n]f64 {
+    var numbers: [n]f64 = undefined;
+    var rnd = std.crypto.random;
+
+    for (&numbers) |*val| {
+        val.* += rnd.float(f64);
+    }
+    return numbers;
+}
+
+fn generateRandomVectorf32(comptime n: usize) [n]f32 {
+    var numbers: [n]f32 = undefined;
+    var rnd = std.crypto.random;
+
+    for (&numbers) |*val| {
+        val.* += rnd.float(f32);
+    }
+    return numbers;
+}
+
+test "stuff" {
+    var test_allocator = std.testing.allocator;
+    var v = VecStore(@Vector(1024, f32)).init(&test_allocator);
+    // try v.add(v1, "some meta data");
+    for (0..100) |i| {
+        try v.add(generateRandomVectorf32(1024), "meta data");
+        _ = i;
+    }
+    v.vectors.removeAll();
+    var search_match = v.vectors.dequeue();
+    if (search_match) |sm| {
+        var best_match = v.get_best_match(sm);
+        std.debug.print("best match {d}\n", .{best_match});
+    } else {
+        std.debug.print("dequeue is null\n", .{});
+    }
+    // var rndVec = generateRandomVectorf32(512);
+    // _ = rndVec;
+    // std.debug.print("rnd vec {any}\n", .{rndVec});
 }

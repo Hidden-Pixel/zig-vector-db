@@ -12,24 +12,24 @@ pub fn VecStore(comptime T: type) type {
             };
         }
 
-        pub fn dotProduct(self: *This, v1: T, v2: T) f32 {
+        pub fn dotProduct(self: *This, v1: T, v2: T) f64 {
             _ = self;
             return @reduce(.Add, v1 * v2);
         }
 
-        pub fn magnitude(self: *This, v1: T) f32 {
+        pub fn magnitude(self: *This, v1: T) f64 {
             _ = self;
             var sum = @reduce(.Add, v1 * v1);
             var sqrt_sum = std.math.sqrt(sum);
             return sqrt_sum;
         }
 
-        pub fn cosineSim(self: *This, v1: T, v2: T) f32 {
+        pub fn cosineSim(self: *This, v1: T, v2: T) f64 {
             return self.dotProduct(v1, v2) / (self.magnitude(v1) * self.magnitude(v2));
         }
 
-        pub fn get_best_match(self: *This, v: T) f32 {
-            var best_match: f32 = 0;
+        pub fn get_best_match(self: *This, v: T) f64 {
+            var best_match: f64 = 0;
             var current_node = self.vectors.head;
             while (current_node) |node| {
                 var cosine = self.cosineSim(v, node.data);
@@ -108,23 +108,44 @@ fn generateRandomVectorf32(comptime n: usize) [n]f32 {
     return numbers;
 }
 
-test "stuff" {
+test "best match f32" {
     var test_allocator = std.testing.allocator;
-    var v = VecStore(@Vector(1024, f32)).init(&test_allocator);
-    // try v.add(v1, "some meta data");
-    for (0..100) |i| {
-        try v.add(generateRandomVectorf32(1024), "meta data");
+    var v = VecStore(@Vector(512, f32)).init(&test_allocator);
+    defer v.vectors.removeAll();
+
+    for (0..50000) |i| {
+        var rvec = generateRandomVectorf32(512);
+        var vec: @Vector(512, f32) = rvec;
+        try v.add(vec, "meta");
         _ = i;
     }
-    v.vectors.removeAll();
+
     var search_match = v.vectors.dequeue();
     if (search_match) |sm| {
+        var timer = try std.time.Timer.start();
         var best_match = v.get_best_match(sm);
-        std.debug.print("best match {d}\n", .{best_match});
-    } else {
-        std.debug.print("dequeue is null\n", .{});
+        var elapsed = timer.read();
+        std.debug.print("best match {d} {d}\n", .{ elapsed, best_match });
     }
-    // var rndVec = generateRandomVectorf32(512);
-    // _ = rndVec;
-    // std.debug.print("rnd vec {any}\n", .{rndVec});
+}
+
+test "best match f64" {
+    var test_allocator = std.testing.allocator;
+    var v = VecStore(@Vector(512, f64)).init(&test_allocator);
+    defer v.vectors.removeAll();
+
+    for (0..50000) |i| {
+        var rvec = generateRandomVectorf32(512);
+        var vec: @Vector(512, f64) = rvec;
+        try v.add(vec, "meta");
+        _ = i;
+    }
+
+    var search_match = v.vectors.dequeue();
+    if (search_match) |sm| {
+        var timer = try std.time.Timer.start();
+        var best_match = v.get_best_match(sm);
+        var elapsed = timer.read();
+        std.debug.print("best match {d} {d}\n", .{ elapsed, best_match });
+    }
 }

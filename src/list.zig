@@ -54,7 +54,7 @@ pub fn LinkedList(comptime T: type) type {
                 self.tail = null;
             }
 
-            defer self.allocator.destroy(head);
+            self.allocator.destroy(head);
             return head.data;
         }
 
@@ -62,22 +62,21 @@ pub fn LinkedList(comptime T: type) type {
             var current_node: ?*Node = self.head;
             while (current_node) |i| {
                 current_node = i.next;
-
                 self.allocator.destroy(i);
             }
             self.head = null;
         }
 
-        // pub fn print(self: *This, depth: usize) void {
-        //     var idx: usize = 1;
-        //     var current_node = self.head;
-        //     std.debug.print("\n", .{});
-        //     while (current_node) |node| {
-        //         std.debug.print("idx={d} value={any}\n", .{ idx, node.data });
-        //         current_node = node.next;
-        //         idx = idx + 1;
-        //         if (idx > depth) return;
-        //     }
-        // }
+        pub fn print(self: *This, depth: usize) void {
+            var idx: usize = 1;
+            var current_node = self.head;
+            std.debug.print("\n", .{});
+            while (current_node) |node| {
+                std.debug.print("idx={d} value={any}\n", .{ idx, node.data });
+                current_node = node.next;
+                idx = idx + 1;
+                if (idx > depth) return;
+            }
+        }
     };
 }

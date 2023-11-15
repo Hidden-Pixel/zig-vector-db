@@ -1,5 +1,5 @@
 const std = @import("std");
-pub const COSINE_SIM: u8 = 1;
+const COSINE_SIM: u8 = 1;
 
 pub const message = struct {
     queue_name: []const u8,

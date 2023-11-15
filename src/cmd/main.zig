@@ -1,6 +1,5 @@
 const std = @import("std");
 const linked_list = @import("list.zig");
-// const queue = @import("list.zig");
 
 const port_num = 3000;
 
@@ -37,7 +36,7 @@ pub fn main() !void {
 
 // const s = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 11\n\nhello world";
 fn handleConnection(conn: std.net.StreamServer.Connection) void {
-    var buf: [1024]u8 = undefined;
+    var buf: [1024 * 1024]u8 = undefined;
     defer conn.stream.close();
 
     const n: usize = conn.stream.read(&buf) catch |err| {
@@ -45,14 +44,30 @@ fn handleConnection(conn: std.net.StreamServer.Connection) void {
         return;
     };
 
+    // TODO: check for EOF
+    // route the message to the appropriate handler function
     switch (buf[0]) {
-       linked_list.COSINE_SIM  => std.debug.print("", .{}),
+        1 => {
+            GetCosineSim(buf[1..n]);
+        },
+        2 => {
+            // some other message type
+        },
+        else => {
+            std.log.err("no such message type", .{});
+        },
     }
-    std.log.debug("bytes read: {d} {s}", .{ n, buf[0..n] });
+
+    std.log.debug("bytes read: {d} {s}", .{ n, std.fmt.fmtSliceHexLower(buf[0..n]) });
 }
 
-fn getCosineSim()
+fn GetCosineSim(buf: []u8) void {
+    std.debug.print("{s}\n", .{std.fmt.fmtSliceHexLower(buf)});
+    const floatSlice = std.mem.bytesAsSlice(f32, buf[0..]);
+    std.debug.print("{any}\n", .{floatSlice});
+}
 
+// ========================== Vector store stuff
 pub fn VecStore(comptime T: type) type {
     return struct {
         const This = @This();
@@ -96,7 +111,59 @@ pub fn VecStore(comptime T: type) type {
         pub fn add(self: *This, v: T, meta: []const u8) !void {
             try self.vectors.add(v, meta);
         }
+
+        // kmeans stuff
+        //
+        pub fn centroid(self: *This, cluster: std.ArrayList(T)) T {
+            _ = self;
+            var n: T = undefined;
+            for (cluster.items) |point| {
+                n += point;
+            }
+            const result: T = @splat(@floatFromInt(cluster.items.len));
+            return n / result;
+        }
+        // func centroid(cluster []Point) Point {
+        // 	var x, y float64
+        // 	for _, point := range cluster {
+        // 		x += point.X
+        // 		y += point.Y
+        // 	}
+        // 	return Point{x / float64(len(cluster)), y / float64(len(cluster))}
+        // }
+        //
+
     };
+}
+
+test "centroid" {
+    std.debug.print("\n", .{});
+    var test_allocator = std.testing.allocator;
+    var v1: @Vector(2, f32) = @Vector(2, f32){ 2, 2 };
+    var v2: @Vector(2, f32) = @Vector(2, f32){ 1, 1 };
+    var v3: @Vector(2, f32) = @Vector(2, f32){ 3, 3 };
+    var list = std.ArrayList(@Vector(2, f32)).init(std.testing.allocator);
+    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
+
+    // var v = VecStore(@Vector(3, f32)).init(&test_allocator);
+    defer list.deinit();
+    try list.append(v2);
+    try list.append(v1);
+    try list.append(v3);
+    var centroid = v.centroid(list);
+    std.debug.print("centroid {any}\n", .{centroid});
+
+    _ = list.pop();
+    _ = list.pop();
+    _ = list.pop();
+    v1 = @Vector(2, f32){ -1, -2 };
+    v2 = @Vector(2, f32){ 0, 0 };
+    v3 = @Vector(2, f32){ 1, 2 };
+    try list.append(v2);
+    try list.append(v1);
+    try list.append(v3);
+    centroid = v.centroid(list);
+    std.debug.print("centroid {any}\n", .{centroid});
 }
 
 test "dot product" {

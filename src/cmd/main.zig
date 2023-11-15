@@ -130,15 +130,21 @@ pub fn VecStore(comptime T: type) type {
             return n / result;
         }
 
-        pub fn kmeans(self: *This, k: i32, epsilon: f32) void {
+        pub fn kmeans(self: *This, k: usize, epsilon: f32) void {
             _ = epsilon;
-            _ = k;
-            // std.MultiArrayList(comptime T: type)
-            //
             var alloc = self.allocator.*;
-            var map = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
-            _ = map;
 
+            var centroids = std.ArrayList(T).init(alloc);
+            _ = centroids;
+            for (0..k) |i| {
+                _ = i;
+            }
+            // _ = epsilon;
+            // _ = k;
+
+            // var map = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
+            // _ = map;
+            // map.put(key: K, value: V)
             // _ = map;
             //
             //

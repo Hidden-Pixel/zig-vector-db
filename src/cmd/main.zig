@@ -131,12 +131,14 @@ pub fn VecStore(comptime T: type) type {
         }
 
         pub fn kmeans(self: *This, k: i32, epsilon: f32) void {
-            _ = self;
             _ = epsilon;
             _ = k;
+            // std.MultiArrayList(comptime T: type)
             //
-            // var alloc = self.allocator.*;
-            // var map = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
+            var alloc = self.allocator.*;
+            var map = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
+            _ = map;
+
             // _ = map;
             //
             //
@@ -165,7 +167,33 @@ pub fn VecStore(comptime T: type) type {
 //
 //
 //
-//
+test "std.hash_map basic usage" {
+    var map = std.AutoHashMap(u32, u32).init(std.testing.allocator);
+    defer map.deinit();
+
+    const count = 5;
+    var i: u32 = 0;
+    var total: u32 = 0;
+    while (i < count) : (i += 1) {
+        try map.put(i, i);
+        total += i;
+    }
+
+    var sum: u32 = 0;
+    var it = map.iterator();
+    while (it.next()) |kv| {
+        sum += kv.key_ptr.*;
+    }
+    try std.testing.expectEqual(total, sum);
+
+    i = 0;
+    sum = 0;
+    while (i < count) : (i += 1) {
+        try std.testing.expectEqual(i, map.get(i).?);
+        sum += map.get(i).?;
+    }
+    try std.testing.expectEqual(total, sum);
+}
 
 test "kmeans" {
     var test_allocator = std.testing.allocator;

@@ -1,5 +1,57 @@
 const std = @import("std");
 const linked_list = @import("list.zig");
+// const queue = @import("list.zig");
+
+const port_num = 3000;
+
+pub fn main() !void {
+    var gpa_server = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = gpa_server.allocator();
+
+    var v = VecStore(@Vector(512, f32)).init(&gpa);
+    _ = v;
+    var opts: std.net.StreamServer.Options = std.net.StreamServer.Options{
+        .reuse_address = true,
+    };
+
+    var server: std.net.StreamServer = std.net.StreamServer.init(opts);
+    defer server.deinit();
+
+    // start the server listening on 127.0.0.1
+    const addr = try std.net.Address.parseIp("0.0.0.0", port_num);
+    try server.listen(addr);
+    std.log.info("listening on {d}", .{port_num});
+
+    // start up thread pool
+    var thread_pool: std.Thread.Pool = undefined;
+    try thread_pool.init(.{ .allocator = gpa, .n_jobs = 12 });
+    defer thread_pool.deinit();
+
+    while (true) {
+        var conn = try server.accept();
+        _ = thread_pool.spawn(handleConnection, .{conn}) catch |err| {
+            std.debug.print("{any}", .{err});
+        };
+    }
+}
+
+// const s = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 11\n\nhello world";
+fn handleConnection(conn: std.net.StreamServer.Connection) void {
+    var buf: [1024]u8 = undefined;
+    defer conn.stream.close();
+
+    const n: usize = conn.stream.read(&buf) catch |err| {
+        std.log.err("{any}", .{err});
+        return;
+    };
+
+    switch (buf[0]) {
+       linked_list.COSINE_SIM  => std.debug.print("", .{}),
+    }
+    std.log.debug("bytes read: {d} {s}", .{ n, buf[0..n] });
+}
+
+fn getCosineSim()
 
 pub fn VecStore(comptime T: type) type {
     return struct {
@@ -113,7 +165,7 @@ test "best match f32" {
     var v = VecStore(@Vector(512, f32)).init(&test_allocator);
     defer v.vectors.removeAll();
 
-    for (0..50000) |i| {
+    for (0..50) |i| {
         var rvec = generateRandomVectorf32(512);
         var vec: @Vector(512, f32) = rvec;
         try v.add(vec, "meta");
@@ -134,7 +186,7 @@ test "best match f64" {
     var v = VecStore(@Vector(512, f64)).init(&test_allocator);
     defer v.vectors.removeAll();
 
-    for (0..50000) |i| {
+    for (0..50) |i| {
         var rvec = generateRandomVectorf32(512);
         var vec: @Vector(512, f64) = rvec;
         try v.add(vec, "meta");

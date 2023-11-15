@@ -44,7 +44,7 @@ pub fn LinkedList(comptime T: type) type {
             // the statement below checks if self.head is null essentially
             // and if it is, we just return null.
             const head = self.head orelse return null;
-
+            defer self.allocator.destroy(head);
             // if head has a next node, then swap head with next so we can
             // dequeue the item
             if (head.next) |next| {
@@ -54,7 +54,6 @@ pub fn LinkedList(comptime T: type) type {
                 self.tail = null;
             }
 
-            self.allocator.destroy(head);
             return head.data;
         }
 

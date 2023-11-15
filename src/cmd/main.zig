@@ -72,16 +72,23 @@ pub fn VecStore(comptime T: type) type {
     return struct {
         const This = @This();
         vectors: linked_list.LinkedList(T),
+        allocator: *std.mem.Allocator,
 
         pub fn init(allocator: *std.mem.Allocator) This {
             return .{
                 .vectors = linked_list.LinkedList(T).init(allocator),
+                .allocator = allocator,
             };
         }
 
         pub fn dotProduct(self: *This, v1: T, v2: T) f64 {
             _ = self;
             return @reduce(.Add, v1 * v2);
+        }
+
+        pub fn distance(self: *This, v1: T, v2: T) f64 {
+            var x: T = v2 - v1;
+            return magnitude(self, x);
         }
 
         pub fn magnitude(self: *This, v1: T) f64 {
@@ -113,7 +120,6 @@ pub fn VecStore(comptime T: type) type {
         }
 
         // kmeans stuff
-        //
         pub fn centroid(self: *This, cluster: std.ArrayList(T)) T {
             _ = self;
             var n: T = undefined;
@@ -123,17 +129,64 @@ pub fn VecStore(comptime T: type) type {
             const result: T = @splat(@floatFromInt(cluster.items.len));
             return n / result;
         }
-        // func centroid(cluster []Point) Point {
-        // 	var x, y float64
-        // 	for _, point := range cluster {
-        // 		x += point.X
-        // 		y += point.Y
-        // 	}
-        // 	return Point{x / float64(len(cluster)), y / float64(len(cluster))}
-        // }
-        //
 
+        pub fn kmeans(self: *This, k: i32, epsilon: f32) void {
+            _ = self;
+            _ = epsilon;
+            _ = k;
+            //
+            // var alloc = self.allocator.*;
+            // var map = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
+            // _ = map;
+            //
+            //
+            //
+            // std.MultiArrayList(T).
+            // var v3: @Vector(2, f32) = @Vector(2, f32){ 3, 3 };
+            // _ = v3;
+            // var list = std.ArrayList(@Vector(2, f32)).init(alloc);
+            // map.put(T, list);
+            // return &map;
+            // var mikap: std.AutoHashMap = std.AutoHashMap(comptime K: type, comptime V: type)
+
+        }
     };
+}
+
+// const Point = struct { x: i32, y: i32 };
+//
+// var map = std.AutoHashMap(u32, Point).init(
+//     test_allocator,
+// );
+// defer map.deinit();
+//
+// try map.put(1525, .{ .x = 1, .y = -4 });
+//
+//
+//
+//
+//
+
+test "kmeans" {
+    var test_allocator = std.testing.allocator;
+    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
+    v.kmeans(0, 0.01);
+}
+
+test "distance" {
+    var test_allocator = std.testing.allocator;
+    var v1: @Vector(2, f32) = @Vector(2, f32){ 2, 7 };
+    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
+    var magnitude = v.distance(v1, v1);
+    std.debug.print("distance {d} \n", .{magnitude});
+    try std.testing.expect(magnitude == 0);
+
+    var b: @Vector(2, f32) = @Vector(2, f32){ 0, 3 };
+    var a: @Vector(2, f32) = @Vector(2, f32){ 4, 0 };
+
+    magnitude = v.distance(a, b);
+    try std.testing.expect(magnitude == 5);
+    std.debug.print("distance {d} \n", .{magnitude});
 }
 
 test "centroid" {

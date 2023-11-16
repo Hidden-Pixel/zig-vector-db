@@ -80,9 +80,9 @@ pub fn VecStore(comptime T: type) type {
             };
         }
 
-        pub fn dotProduct(self: *This, v1: T, v2: T) f64 {
+        pub fn dotProduct(self: *This, v1: T, v2: T) f32 {
             _ = self;
-            return @reduce(.Add, v1 * v2);
+            return @as(f32, @floatCast(@reduce(.Add, v1 * v2)));
         }
 
         pub fn distance(self: *This, v1: T, v2: T) f32 {
@@ -90,19 +90,19 @@ pub fn VecStore(comptime T: type) type {
             return magnitude(self, x);
         }
 
-        pub fn magnitude(self: *This, v1: T) f64 {
+        pub fn magnitude(self: *This, v1: T) f32 {
             _ = self;
-            var sum = @reduce(.Add, v1 * v1);
+            var sum = @as(f32, @floatCast(@reduce(.Add, v1 * v1)));
             var sqrt_sum = std.math.sqrt(sum);
             return sqrt_sum;
         }
 
-        pub fn cosineSim(self: *This, v1: T, v2: T) f64 {
+        pub fn cosineSim(self: *This, v1: T, v2: T) f32 {
             return self.dotProduct(v1, v2) / (self.magnitude(v1) * self.magnitude(v2));
         }
 
-        pub fn get_best_match(self: *This, v: T) f64 {
-            var best_match: f64 = 0;
+        pub fn get_best_match(self: *This, v: T) f32 {
+            var best_match: f32 = 0;
             var current_node = self.vectors.head;
             while (current_node) |node| {
                 var cosine = self.cosineSim(v, node.data);
@@ -130,44 +130,46 @@ pub fn VecStore(comptime T: type) type {
             return n / result;
         }
 
-        pub fn kmeans(self: *This, comptime k: usize, epsilon: f32, comptime aids: usize) !void {
+        pub fn kmeans(self: *This, comptime k: usize, epsilon: f32, comptime vec_dim: usize) !void {
             _ = epsilon;
-            // const aids = @typeInfo(@TypeOf(self)).Pointer.child;
-            // std.debug.print("AIDS  {any}\n", .{aids});
+
             var alloc = self.allocator.*;
             var centroids = std.ArrayList(T).init(alloc);
             defer centroids.deinit();
-            // What I'd do is make an array of the element type, get an instance of the std.rand.Random interface,
-            // do random.bytes(std.mem.asBytes(&array)), and then assign the array to the vector
-            // @typeInfo(@TypeOf(vector)).Vector.len
-            for (0..k) |i| {
-                _ = i;
-                var rvec = generateRandomVectorf32(aids);
+
+            for (0..k) |_| {
+                var rvec = generateRandomVectorf32(vec_dim);
                 var vec: T = rvec;
                 try centroids.append(vec);
             }
-            std.debug.print("CENTROIDS {any}\n", .{centroids.items});
+            std.debug.print("random centroids seeded: {any}\n", .{centroids.items});
 
             while (true) {
-                // create clusters
+                // create clusters, clusters is a map of our centroids to the cluster of vectors assigned assigned to the centroid.
                 var clusters = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
 
-                _ = clusters;
+                // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 var current_node = self.vectors.head;
                 while (current_node) |node| {
-                    // find the closest centroid for this data point
-                    var belongsTo: usize = 0;
-                    _ = belongsTo;
+                    // find the closest centroid for node (which contains our actual vector)
+                    var belongsTo: T = undefined;
                     var minDist: f32 = std.math.inf(f32);
-                    var idx: i32 = 0;
-                    _ = idx;
                     for (centroids.items) |item| {
-                        var dist: f64 = distance(self, node.data, item);
+                        var dist: f32 = distance(self, node.data, item);
+                        std.debug.print("checking distance against centroid: {any} and point {any} dist={d}\n", .{ item, node.data, dist });
                         if (dist < minDist) {
                             minDist = dist;
+                            belongsTo = item;
                         }
                     }
-
+                    // clusters[belongsTo].append(node);
+                    var cluster_arr = std.ArrayList(T).init(alloc);
+                    try cluster_arr.append(belongsTo);
+                    defer cluster_arr.deinit();
+                    std.debug.print("getting or putting {any} node = {any}\n", .{ belongsTo, node.data });
+                    // var a = try clusters.getOrPut(belongsTo);
+                    try clusters.put(node.data, cluster_arr);
+                    // .?.append(node);
                     current_node = node.next;
                 }
                 break;
@@ -228,10 +230,10 @@ test "kmeans" {
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
     var v1: @Vector(2, f32) = @Vector(2, f32){ 2, 7 };
-    _ = v1;
 
-    // try v.add(v1, "meta");
+    try v.add(v1, "meta");
     try v.kmeans(2, 0.01, 2);
+    v.vectors.removeAll();
 }
 
 test "distance" {

@@ -114,8 +114,6 @@ int main()
     double epsilon = 0.001;
 
     Point *centroids = kMeans(testData, num_points, k, epsilon);
-
-
     // Print the resulting clusters
     for (int i = 0; i < k; ++i) {
         printf("Cluster[%d] centroid: { %f, %f }\n", i, centroids[i].coords[0], centroids[i].coords[1]);

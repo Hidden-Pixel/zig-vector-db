@@ -67,6 +67,19 @@ pub fn LinkedList(comptime T: type) type {
             self.head = null;
         }
 
+        pub fn findAt(self: *This, idx: u32) T {
+            var i: u32 = 0;
+            var current_node: ?*Node = self.head;
+            for (current_node) |node| {
+                current_node = node.next;
+                if (i == idx) {
+                    break;
+                }
+                i += 1;
+            }
+            return current_node;
+        }
+
         pub fn print(self: *This, depth: usize) void {
             var idx: usize = 1;
             var current_node = self.head;

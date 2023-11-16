@@ -73,7 +73,6 @@ pub fn VecStore(comptime T: type) type {
         const This = @This();
         vectors: linked_list.LinkedList(T),
         allocator: *std.mem.Allocator,
-
         pub fn init(allocator: *std.mem.Allocator) This {
             return .{
                 .vectors = linked_list.LinkedList(T).init(allocator),
@@ -86,7 +85,7 @@ pub fn VecStore(comptime T: type) type {
             return @reduce(.Add, v1 * v2);
         }
 
-        pub fn distance(self: *This, v1: T, v2: T) f64 {
+        pub fn distance(self: *This, v1: T, v2: T) f32 {
             var x: T = v2 - v1;
             return magnitude(self, x);
         }
@@ -126,19 +125,54 @@ pub fn VecStore(comptime T: type) type {
             for (cluster.items) |point| {
                 n += point;
             }
+
             const result: T = @splat(@floatFromInt(cluster.items.len));
             return n / result;
         }
 
-        pub fn kmeans(self: *This, k: usize, epsilon: f32) void {
+        pub fn kmeans(self: *This, comptime k: usize, epsilon: f32, comptime aids: usize) !void {
             _ = epsilon;
+            // const aids = @typeInfo(@TypeOf(self)).Pointer.child;
+            // std.debug.print("AIDS  {any}\n", .{aids});
             var alloc = self.allocator.*;
-
             var centroids = std.ArrayList(T).init(alloc);
-            _ = centroids;
+            defer centroids.deinit();
+            // What I'd do is make an array of the element type, get an instance of the std.rand.Random interface,
+            // do random.bytes(std.mem.asBytes(&array)), and then assign the array to the vector
+            // @typeInfo(@TypeOf(vector)).Vector.len
             for (0..k) |i| {
                 _ = i;
+                var rvec = generateRandomVectorf32(aids);
+                var vec: T = rvec;
+                try centroids.append(vec);
             }
+            std.debug.print("CENTROIDS {any}\n", .{centroids.items});
+
+            while (true) {
+                // create clusters
+                var clusters = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
+
+                _ = clusters;
+                var current_node = self.vectors.head;
+                while (current_node) |node| {
+                    // find the closest centroid for this data point
+                    var belongsTo: usize = 0;
+                    _ = belongsTo;
+                    var minDist: f32 = std.math.inf(f32);
+                    var idx: i32 = 0;
+                    _ = idx;
+                    for (centroids.items) |item| {
+                        var dist: f64 = distance(self, node.data, item);
+                        if (dist < minDist) {
+                            minDist = dist;
+                        }
+                    }
+
+                    current_node = node.next;
+                }
+                break;
+            }
+
             // _ = epsilon;
             // _ = k;
 
@@ -161,17 +195,6 @@ pub fn VecStore(comptime T: type) type {
     };
 }
 
-// const Point = struct { x: i32, y: i32 };
-//
-// var map = std.AutoHashMap(u32, Point).init(
-//     test_allocator,
-// );
-// defer map.deinit();
-//
-// try map.put(1525, .{ .x = 1, .y = -4 });
-//
-//
-//
 //
 test "std.hash_map basic usage" {
     var map = std.AutoHashMap(u32, u32).init(std.testing.allocator);
@@ -204,7 +227,11 @@ test "std.hash_map basic usage" {
 test "kmeans" {
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
-    v.kmeans(0, 0.01);
+    var v1: @Vector(2, f32) = @Vector(2, f32){ 2, 7 };
+    _ = v1;
+
+    // try v.add(v1, "meta");
+    try v.kmeans(2, 0.01, 2);
 }
 
 test "distance" {
@@ -216,6 +243,7 @@ test "distance" {
     try std.testing.expect(magnitude == 0);
 
     var b: @Vector(2, f32) = @Vector(2, f32){ 0, 3 };
+
     var a: @Vector(2, f32) = @Vector(2, f32){ 4, 0 };
 
     magnitude = v.distance(a, b);
@@ -231,7 +259,7 @@ test "centroid" {
     var v3: @Vector(2, f32) = @Vector(2, f32){ 3, 3 };
     var list = std.ArrayList(@Vector(2, f32)).init(std.testing.allocator);
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
-
+    // std.debug.print("VEC LEN {any}\n", .{@typeInfo(@TypeOf(v2)).Vector.len});
     // var v = VecStore(@Vector(3, f32)).init(&test_allocator);
     defer list.deinit();
     try list.append(v2);

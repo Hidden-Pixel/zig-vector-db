@@ -63,7 +63,6 @@ pub fn VecStore(comptime T: type) type {
         }
 
         pub fn kmeans(self: *This, comptime k: usize, epsilon: f32, comptime vec_dim: usize) !void {
-            _ = vec_dim;
             // TODO: figure out a way to not have to pass in vec_dim
 
             var alloc = self.allocator.*;
@@ -72,15 +71,16 @@ pub fn VecStore(comptime T: type) type {
             defer centroids.deinit();
             defer newCentroids.deinit();
 
-            // for (0..k) |_| {
-            //     var rvec = generateRandomVectorf32(vec_dim);
-            //     var vec: T = rvec;
-            //     try centroids.append(vec);
-            // }
+            for (0..k) |_| {
+                var rvec = generateRandomVectorf32(vec_dim);
+                var vec: T = rvec;
+                try centroids.append(vec);
+            }
             //
-            try centroids.append(@Vector(2, f32){ 8, 9 });
-            try centroids.append(@Vector(2, f32){ 2, 2 });
+            // try centroids.append(@Vector(2, f32){ 8, 9 });
+            // try centroids.append(@Vector(2, f32){ 2, 2 });
             var loops: u32 = 0;
+            _ = loops;
             while (true) {
                 // create clusters clusters is a list of centroids to a list of vectors (both are vector types)
                 var clusters = std.ArrayList(std.ArrayList(T)).init(alloc);
@@ -103,8 +103,7 @@ pub fn VecStore(comptime T: type) type {
                             belongsTo = i;
                         }
                     }
-                    var t = point.data;
-                    try clusters.items[belongsTo].append(t);
+                    try clusters.items[belongsTo].append(point.data);
                     current_node = point.next;
                 }
 
@@ -135,14 +134,14 @@ pub fn VecStore(comptime T: type) type {
                 }
                 newCentroids.clearRetainingCapacity();
 
-                loops += 1;
-                if (loops > 1) {
-                    clusters.deinit();
-                    for (clusters.items) |c| {
-                        c.deinit();
-                    }
-                    return;
-                }
+                // loops += 1;
+                // if (loops > 1) {
+                //     clusters.deinit();
+                //     for (clusters.items) |c| {
+                //         c.deinit();
+                //     }
+                //     return;
+                // }
                 for (clusters.items) |c| {
                     c.deinit();
                 }
@@ -166,4 +165,13 @@ test "kmeans" {
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
     try v.kmeans(2, 0.01, 2);
     v.vectors.removeAll();
+}
+fn generateRandomVectorf32(comptime n: usize) [n]f32 {
+    var numbers: [n]f32 = undefined;
+    var rnd = std.crypto.random;
+
+    for (&numbers) |*val| {
+        val.* += rnd.float(f32);
+    }
+    return numbers;
 }

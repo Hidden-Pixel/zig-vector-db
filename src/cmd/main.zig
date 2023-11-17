@@ -146,9 +146,8 @@ pub fn VecStore(comptime T: type) type {
 
             while (true) {
                 // create clusters, clusters is a map of our centroids to the cluster of vectors assigned assigned to the centroid.
-                const clusters = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
-                _ = clusters;
-
+                var clusters = std.ArrayList(std.ArrayList(T)).init(alloc);
+                defer clusters.deinit();
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 var current_node = self.vectors.head;
                 while (current_node) |node| {
@@ -165,15 +164,10 @@ pub fn VecStore(comptime T: type) type {
                     }
 
                     std.debug.print("adding belongsTo {any}\n", .{belongsTo});
-                    // clusters[belongsTo].append(node);
                     var cluster_arr = std.ArrayList(T).init(alloc);
                     try cluster_arr.append(belongsTo);
-                    // try cluster_arr.append(belongsTo);
                     defer cluster_arr.deinit();
-                    // std.debug.print("getting or putting {any} \n", .{belongsTo});
-                    // try clusters.put(belongsTo, cluster_arr);
-                    // try clusters.put(node.data, cluster_arr);
-                    // .?.append(node);
+                    try clusters.append(cluster_arr);
                     current_node = node.next;
                 }
                 break;

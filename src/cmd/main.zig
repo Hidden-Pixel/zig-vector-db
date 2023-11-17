@@ -132,13 +132,13 @@ pub fn VecStore(comptime T: type) type {
 
         pub fn kmeans(self: *This, comptime k: usize, epsilon: f32, comptime vec_dim: usize) !void {
             _ = vec_dim;
-            _ = k;
             // TODO: figure out a way to not have to pass in vec_dim
-            _ = epsilon;
 
             var alloc = self.allocator.*;
             var centroids = std.ArrayList(T).init(alloc);
+            var newCentroids = std.ArrayList(T).init(alloc);
             defer centroids.deinit();
+            defer newCentroids.deinit();
 
             // for (0..k) |_| {
             //     var rvec = generateRandomVectorf32(vec_dim);
@@ -149,67 +149,92 @@ pub fn VecStore(comptime T: type) type {
             try centroids.append(@Vector(2, f32){ 8, 9 });
             try centroids.append(@Vector(2, f32){ 2, 2 });
             // std.debug.print("random centroids seeded: {any}\n", .{centroids.items});
-
+            var loops: u32 = 0;
             while (true) {
                 // create clusters clusters is a list of centroids to a list of vectors (both are vector types)
-                // var clusters = std.ArrayList(std.ArrayList(T)).init(alloc);
-                var clusters =[vec_dim]std.ArrayList(T).init(alloc);
+                var clusters = std.ArrayList(std.ArrayList(T)).init(alloc);
+                // defer clusters.deinit();
+
+                for (0..k) |_| {
+                    var x = std.ArrayList(T).init(alloc);
+                    try clusters.append(x);
+                }
                 // defer clusters.deinit();
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 var current_node = self.vectors.head;
                 while (current_node) |point| {
                     // find the closest centroid for node (which contains our actual vector)
-                    var belongsTo: T = undefined;
+                    // var belongsTo: T = undefined;
+                    var belongsTo: usize = 0;
                     var minDist: f32 = std.math.inf(f32);
-                    var 
-                    for (centroids.items) |centro| {
+                    for (centroids.items, 0..) |centro, i| {
                         var dist: f32 = distance(self, point.data, centro);
                         std.debug.print("centroid {any} point {any} dist {d}\n", .{ centro, point.data, dist });
                         if (dist < minDist) {
                             // std.debug.print("triggered\n", .{});
                             minDist = dist;
-                            belongsTo = centro;
+                            belongsTo = i;
                         }
                     }
-
-
-
-                    var cluster_arr = std.ArrayList(T).init(alloc);
-                    try cluster_arr.append(belongsTo);
-                    try clusters.append(cluster_arr);
+                    // std.debug.print("idx {any}\n", .{clusters.items[belongsTo]});
+                    var t = point.data;
+                    try clusters.items[belongsTo].append(t);
+                    // var cluster_arr = std.ArrayList(T).init(alloc);
+                    // try cluster_arr.append(belongsTo);
+                    // try clusters.append(cluster_arr);
                     current_node = point.next;
                 }
-                var i: u32 = 0;
-                for (clusters.items) |clus| {
-                    for (clus.items) |vec| {
-                        _ = vec;
-                        // std.debug.print("cluster {d} item={any}", .{ i, vec });
-                    }
-                    i += 1;
-                    std.debug.print("\n", .{});
-                }
-                // var newCentroids = std.ArrayList(T).init(alloc);
-                // defer newCentroids.deinit();
-                // for (clusters.items) |cluster| {
-                //     var x = self.centroid(cluster);
-                //     std.debug.print("new centroid {any}\n", .{x});
-                //     try newCentroids.append(x);
-                // }
 
-                // clean up for now
-                var idx: i32 = 0;
-                _ = idx;
-                for (clusters.items) |c| {
-                    // std.debug.print("CLUSTER {d}\n", .{idx});
-                    // idx += 1;
-                    c.deinit();
-                    for (c.items) |vector| {
-                        _ = vector;
-                        // std.debug.print("VECTOR {any}\n", .{vector});
+                // defer newCentroids.deinit();
+
+                for (clusters.items) |cluster| {
+                    var x = self.centroid(cluster);
+                    std.debug.print("new centroid {any}\n", .{x});
+                    try newCentroids.append(x);
+                }
+
+                var moved: bool = false;
+                for (centroids.items, 0..) |c, i| {
+                    _ = c;
+                    if (self.distance(centroids.items[i], newCentroids.items[i]) > epsilon) {
+                        moved = true;
+                        break;
                     }
+                }
+
+                if (!moved) {
+                    std.debug.print("Were DONE\n", .{});
+                    for (clusters.items) |c| {
+                        c.deinit();
+                    }
+                    clusters.deinit();
+                    return;
+                }
+
+                centroids.clearRetainingCapacity();
+                std.debug.print("clear and free centroids {any}\n", .{centroids});
+                for (newCentroids.items) |item| {
+                    try centroids.append(item);
+                }
+                newCentroids.clearRetainingCapacity();
+                // clean up for now
+                std.debug.print("centroids {any}\n", .{centroids});
+                // newCentroids.clearAndFree();
+
+                loops += 1;
+                if (loops > 1) {
+                    clusters.deinit();
+                    for (clusters.items) |c| {
+                        c.deinit();
+                    }
+                    return;
+                }
+                for (clusters.items) |c| {
+                    c.deinit();
                 }
                 clusters.deinit();
-                break;
+
+                // break;
             }
         }
     };

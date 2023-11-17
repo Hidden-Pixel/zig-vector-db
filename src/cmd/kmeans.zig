@@ -85,11 +85,10 @@ pub fn VecStore(comptime T: type) type {
                 // create clusters clusters is a list of centroids to a list of vectors (both are vector types)
                 var clusters = std.ArrayList(std.ArrayList(T)).init(alloc);
 
+                // Initialize the arraylists that will contain the vectors for each centroid
                 for (0..k) |_| {
-                    var x = std.ArrayList(T).init(alloc);
-                    try clusters.append(x);
+                    try clusters.append(std.ArrayList(T).init(alloc));
                 }
-                // defer clusters.deinit();
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 var current_node = self.vectors.head;
                 while (current_node) |point| {

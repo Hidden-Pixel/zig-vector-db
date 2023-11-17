@@ -41,11 +41,14 @@ var centroids []Point
 			clusters[belongsTo] = append(clusters[belongsTo], point)
 		}
     // fmt.Println("CLUSTERS",clusters)
-
+		// for i, cluster := range clusters {
+      // fmt.Println("cluster", i,"item=",cluster)
+    // }
 		// Find new centroids
 		newCentroids := make([]Point, k)
 		for i, cluster := range clusters {
 			newCentroids[i] = centroid(cluster)
+      // fmt.Println("new centroid", newCentroids[i])  
 		}
 
 		// Check if centroids have moved significantly

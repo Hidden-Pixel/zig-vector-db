@@ -146,7 +146,8 @@ pub fn VecStore(comptime T: type) type {
 
             while (true) {
                 // create clusters, clusters is a map of our centroids to the cluster of vectors assigned assigned to the centroid.
-                var clusters = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
+                const clusters = std.AutoHashMap(T, std.ArrayList(T)).init(alloc);
+                _ = clusters;
 
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 var current_node = self.vectors.head;
@@ -162,13 +163,16 @@ pub fn VecStore(comptime T: type) type {
                             belongsTo = item;
                         }
                     }
+
+                    std.debug.print("adding belongsTo {any}\n", .{belongsTo});
                     // clusters[belongsTo].append(node);
                     var cluster_arr = std.ArrayList(T).init(alloc);
                     try cluster_arr.append(belongsTo);
+                    // try cluster_arr.append(belongsTo);
                     defer cluster_arr.deinit();
-                    std.debug.print("getting or putting {any} node = {any}\n", .{ belongsTo, node.data });
-                    // var a = try clusters.getOrPut(belongsTo);
-                    try clusters.put(node.data, cluster_arr);
+                    // std.debug.print("getting or putting {any} \n", .{belongsTo});
+                    // try clusters.put(belongsTo, cluster_arr);
+                    // try clusters.put(node.data, cluster_arr);
                     // .?.append(node);
                     current_node = node.next;
                 }
@@ -227,6 +231,8 @@ test "std.hash_map basic usage" {
 }
 
 test "kmeans" {
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // var allocator = &gpa.allocator();
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
     var v1: @Vector(2, f32) = @Vector(2, f32){ 2, 7 };

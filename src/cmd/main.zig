@@ -131,48 +131,67 @@ pub fn VecStore(comptime T: type) type {
         }
 
         pub fn kmeans(self: *This, comptime k: usize, epsilon: f32, comptime vec_dim: usize) !void {
+            _ = vec_dim;
+            _ = k;
+            // TODO: figure out a way to not have to pass in vec_dim
             _ = epsilon;
 
             var alloc = self.allocator.*;
             var centroids = std.ArrayList(T).init(alloc);
             defer centroids.deinit();
 
-            for (0..k) |_| {
-                var rvec = generateRandomVectorf32(vec_dim);
-                var vec: T = rvec;
-                try centroids.append(vec);
-            }
+            // for (0..k) |_| {
+            //     var rvec = generateRandomVectorf32(vec_dim);
+            //     var vec: T = rvec;
+            //     try centroids.append(vec);
+            // }
+            //
+            try centroids.append(@Vector(2, f32){ 8, 9 });
+            try centroids.append(@Vector(2, f32){ 2, 2 });
             std.debug.print("random centroids seeded: {any}\n", .{centroids.items});
 
             while (true) {
-                // create clusters, clusters is a map of our centroids to the cluster of vectors assigned assigned to the centroid.
+                // create clusters clusters is a list of centroids to a list of vectors (both are vector types)
                 var clusters = std.ArrayList(std.ArrayList(T)).init(alloc);
-                defer clusters.deinit();
+                // defer clusters.deinit();
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 var current_node = self.vectors.head;
-                while (current_node) |node| {
+                while (current_node) |point| {
                     // find the closest centroid for node (which contains our actual vector)
                     var belongsTo: T = undefined;
                     var minDist: f32 = std.math.inf(f32);
-                    for (centroids.items) |item| {
-                        var dist: f32 = distance(self, node.data, item);
-                        std.debug.print("checking distance against centroid: {any} and point {any} dist={d}\n", .{ item, node.data, dist });
+                    for (centroids.items) |centro| {
+                        var dist: f32 = distance(self, point.data, centro);
+                        std.debug.print("centroid {any} point {any} dist {d}\n", .{ centro, point.data, dist });
                         if (dist < minDist) {
                             minDist = dist;
-                            belongsTo = item;
+                            belongsTo = centro;
                         }
                     }
 
-                    std.debug.print("adding belongsTo {any}\n", .{belongsTo});
                     var cluster_arr = std.ArrayList(T).init(alloc);
                     try cluster_arr.append(belongsTo);
-                    defer cluster_arr.deinit();
+                    // defer cluster_arr.deinit();
                     try clusters.append(cluster_arr);
-                    current_node = node.next;
+                    current_node = point.next;
                 }
+                // std.debug.print("CLUSTERS {any}\n", .{clusters});
+
+                // clean up for now
+                var idx: i32 = 0;
+                _ = idx;
+                for (clusters.items) |c| {
+                    // std.debug.print("CLUSTER {d}\n", .{idx});
+                    // idx += 1;
+                    c.deinit();
+                    for (c.items) |vector| {
+                        _ = vector;
+                        // std.debug.print("VECTOR {any}\n", .{vector});
+                    }
+                }
+                clusters.deinit();
                 break;
             }
-
             // _ = epsilon;
             // _ = k;
 
@@ -227,11 +246,25 @@ test "std.hash_map basic usage" {
 test "kmeans" {
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // var allocator = &gpa.allocator();
+    //
+    //
+    //
+    //       		{1, 2},
+    // {1.5, 1.8},
+    // {2, 2},
+    // {8, 8},
+    // {8, 9},
+    // {9, 11},
+
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
-    var v1: @Vector(2, f32) = @Vector(2, f32){ 2, 7 };
+    try v.add(@Vector(2, f32){ 1, 2 }, "meta");
+    try v.add(@Vector(2, f32){ 1.5, 1.8 }, "meta");
+    try v.add(@Vector(2, f32){ 2, 2 }, "meta");
 
-    try v.add(v1, "meta");
+    try v.add(@Vector(2, f32){ 8, 8 }, "meta");
+    try v.add(@Vector(2, f32){ 8, 9 }, "meta");
+    try v.add(@Vector(2, f32){ 9, 11 }, "meta");
     try v.kmeans(2, 0.01, 2);
     v.vectors.removeAll();
 }

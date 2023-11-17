@@ -1,8 +1,9 @@
 package kmeans
 
 import (
+	"fmt"
 	"math"
-	"math/rand"
+	// "math/rand"
 )
 
 type Point struct {
@@ -12,11 +13,15 @@ type Point struct {
 
 func KMeans(data []Point, k int, epsilon float64) ([][]Point ,[]Point){
 	// Initialize centroids randomly
-	centroids := make([]Point, k)
-	for i := range centroids {
-		centroids[i] = data[rand.Intn(len(data))]
-	}
+	// centroids := make([]Point, k)
+var centroids []Point
+	// for i := range centroids {
+	// 	centroids[i] = data[rand.Intn(len(data))]
+ //    fmt.Println(centroids[i])
+	// }
 
+  centroids = append(centroids, Point{2,2})
+  centroids = append(centroids, Point{8,9})
 	for {
 		// Create clusters
 		clusters := make([][]Point, k)
@@ -26,6 +31,7 @@ func KMeans(data []Point, k int, epsilon float64) ([][]Point ,[]Point){
 			minDist := math.Inf(1)
 			for i, centroid := range centroids {
 				dist := distance(point, centroid)
+        fmt.Println("centroid", centroid,"point",point,"dist", dist)
 				if dist < minDist {
 					minDist = dist
 					belongsTo = i
@@ -34,6 +40,7 @@ func KMeans(data []Point, k int, epsilon float64) ([][]Point ,[]Point){
 			// Add this data point to the cluster of the closest centroid
 			clusters[belongsTo] = append(clusters[belongsTo], point)
 		}
+    // fmt.Println("CLUSTERS",clusters)
 
 		// Find new centroids
 		newCentroids := make([]Point, k)

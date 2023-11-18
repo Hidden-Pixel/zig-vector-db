@@ -71,17 +71,31 @@ pub fn VecStore(comptime T: type) type {
             var alloc = self.allocator.*;
             var centroids = std.ArrayList(T).init(alloc);
             var newCentroids = std.ArrayList(T).init(alloc);
+            // var finalGroupus =
             defer centroids.deinit();
             defer newCentroids.deinit();
+            var rng = std.crypto.random;
+            for (0..k) |i| {
+                _ = i;
+                var idx: usize = 0;
+                var n: usize = rng.intRangeAtMost(usize, 0, self.vectors.items.len);
+                if (n != 0) {
+                    idx = n % self.vectors.items.len;
+                    std.debug.print("{d}\n", .{idx});
+                    try centroids.append(self.vectors.items[idx]);
+                }
+            }
 
+            // if (true) {
+            //     return;
+            // }
             // for (0..k) |_| {
             //     var rvec = generateRandomVectorf32(vec_dim);
             //     var vec: T = rvec;
             //     try centroids.append(vec);
             // }
-            //
-            try centroids.append(@Vector(2, f32){ 8, 9 });
-            try centroids.append(@Vector(2, f32){ 2, 2 });
+            // try centroids.append(@Vector(2, f32){ 8, 9 });
+            // try centroids.append(@Vector(2, f32){ 2, 2 });
             var loops: u32 = 0;
             _ = loops;
             while (true) {
@@ -100,7 +114,7 @@ pub fn VecStore(comptime T: type) type {
                     var minDist: f32 = std.math.inf(f32);
                     for (centroids.items, 0..) |centro, i| {
                         var dist: f32 = distance(self, point, centro);
-                        std.debug.print("centroid {any} point {any} dist {d}\n", .{ centro, point, dist });
+                        // std.debug.print("centroid {any} point {any} dist {d}\n", .{ centro, point, dist });
                         if (dist < minDist) {
                             minDist = dist;
                             belongsTo = i;
@@ -123,8 +137,11 @@ pub fn VecStore(comptime T: type) type {
                 }
 
                 if (!moved) {
-                    std.debug.print("Were DON {any}\n", .{centroids.items});
+                    std.debug.print("Centroids: {any}\n", .{centroids.items});
                     for (clusters.items) |c| {
+                        for (c.items) |a| {
+                            std.debug.print("Vectors: {any}\n", .{a});
+                        }
                         c.deinit();
                     }
                     clusters.deinit();
@@ -160,11 +177,11 @@ test "kmeans" {
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
     try v.add(@Vector(2, f32){ 1, 2 }, "meta");
-    // try v.add(@Vector(2, f32){ 1.5, 1.8 }, "meta");
-    // try v.add(@Vector(2, f32){ 2, 2 }, "meta");
+    try v.add(@Vector(2, f32){ 1.5, 1.8 }, "meta");
+    try v.add(@Vector(2, f32){ 2, 2 }, "meta");
 
-    // try v.add(@Vector(2, f32){ 8, 8 }, "meta");
-    // try v.add(@Vector(2, f32){ 8, 9 }, "meta");
+    try v.add(@Vector(2, f32){ 8, 8 }, "meta");
+    try v.add(@Vector(2, f32){ 8, 9 }, "meta");
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
     try v.kmeans(2, 0.01, 2);
     v.vectors.deinit();

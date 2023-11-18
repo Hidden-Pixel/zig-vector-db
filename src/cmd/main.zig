@@ -1,6 +1,7 @@
 const std = @import("std");
-const linked_list = @import("list.zig");
-
+// const linked_list = @import("list.zig");
+const vecstore = @import("kmeans.zig");
+const VecStore = vecstore.VecStore;
 const port_num = 3000;
 
 pub fn main() !void {

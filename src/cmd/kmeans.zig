@@ -3,11 +3,12 @@ const linked_list = @import("list.zig");
 pub fn VecStore(comptime T: type) type {
     return struct {
         const This = @This();
-        vectors: linked_list.LinkedList(T),
+        // vectors: linked_list.LinkedList(T),
+        vectors: std.ArrayList(T),
         allocator: *std.mem.Allocator,
         pub fn init(allocator: *std.mem.Allocator) This {
             return .{
-                .vectors = linked_list.LinkedList(T).init(allocator),
+                .vectors = std.ArrayList(T).init(allocator.*),
                 .allocator = allocator,
             };
         }
@@ -47,7 +48,8 @@ pub fn VecStore(comptime T: type) type {
         }
 
         pub fn add(self: *This, v: T, meta: []const u8) !void {
-            try self.vectors.add(v, meta);
+            _ = meta;
+            try self.vectors.append(v);
         }
 
         // kmeans stuff
@@ -63,6 +65,7 @@ pub fn VecStore(comptime T: type) type {
         }
 
         pub fn kmeans(self: *This, comptime k: usize, epsilon: f32, comptime vec_dim: usize) !void {
+            _ = vec_dim;
             // TODO: figure out a way to not have to pass in vec_dim
 
             var alloc = self.allocator.*;
@@ -71,14 +74,14 @@ pub fn VecStore(comptime T: type) type {
             defer centroids.deinit();
             defer newCentroids.deinit();
 
-            for (0..k) |_| {
-                var rvec = generateRandomVectorf32(vec_dim);
-                var vec: T = rvec;
-                try centroids.append(vec);
-            }
+            // for (0..k) |_| {
+            //     var rvec = generateRandomVectorf32(vec_dim);
+            //     var vec: T = rvec;
+            //     try centroids.append(vec);
+            // }
             //
-            // try centroids.append(@Vector(2, f32){ 8, 9 });
-            // try centroids.append(@Vector(2, f32){ 2, 2 });
+            try centroids.append(@Vector(2, f32){ 8, 9 });
+            try centroids.append(@Vector(2, f32){ 2, 2 });
             var loops: u32 = 0;
             _ = loops;
             while (true) {
@@ -90,21 +93,21 @@ pub fn VecStore(comptime T: type) type {
                     try clusters.append(std.ArrayList(T).init(alloc));
                 }
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
-                var current_node = self.vectors.head;
-                while (current_node) |point| {
+                // var current_node = self.vectors.head;
+                for (self.vectors.items) |point| {
                     // find the closest centroid for node (which contains our actual vector)
                     var belongsTo: usize = 0;
                     var minDist: f32 = std.math.inf(f32);
                     for (centroids.items, 0..) |centro, i| {
-                        var dist: f32 = distance(self, point.data, centro);
-                        std.debug.print("centroid {any} point {any} dist {d}\n", .{ centro, point.data, dist });
+                        var dist: f32 = distance(self, point, centro);
+                        std.debug.print("centroid {any} point {any} dist {d}\n", .{ centro, point, dist });
                         if (dist < minDist) {
                             minDist = dist;
                             belongsTo = i;
                         }
                     }
-                    try clusters.items[belongsTo].append(point.data);
-                    current_node = point.next;
+                    try clusters.items[belongsTo].append(point);
+                    // current_node = point.next;
                 }
 
                 for (clusters.items) |cluster| {
@@ -164,7 +167,7 @@ test "kmeans" {
     // try v.add(@Vector(2, f32){ 8, 9 }, "meta");
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
     try v.kmeans(2, 0.01, 2);
-    v.vectors.removeAll();
+    v.vectors.deinit();
 }
 fn generateRandomVectorf32(comptime n: usize) [n]f32 {
     var numbers: [n]f32 = undefined;

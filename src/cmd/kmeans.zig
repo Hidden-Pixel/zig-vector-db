@@ -74,17 +74,17 @@ pub fn VecStore(comptime T: type) type {
             // var finalGroupus =
             defer centroids.deinit();
             defer newCentroids.deinit();
-            var rng = std.crypto.random;
-            for (0..k) |i| {
-                _ = i;
-                var idx: usize = 0;
-                var n: usize = rng.intRangeAtMost(usize, 0, self.vectors.items.len);
-                if (n != 0) {
-                    idx = n % self.vectors.items.len;
-                    std.debug.print("{d}\n", .{idx});
-                    try centroids.append(self.vectors.items[idx]);
-                }
-            }
+            // var rng = std.crypto.random;
+            // for (0..k) |i| {
+            //     _ = i;
+            //     var idx: usize = 0;
+            //     var n: usize = rng.intRangeAtMost(usize, 0, self.vectors.items.len);
+            //     if (n != 0) {
+            //         idx = n % self.vectors.items.len;
+            //         std.debug.print("{d}\n", .{idx});
+            //         try centroids.append(self.vectors.items[idx]);
+            //     }
+            // }
 
             // if (true) {
             //     return;
@@ -94,8 +94,8 @@ pub fn VecStore(comptime T: type) type {
             //     var vec: T = rvec;
             //     try centroids.append(vec);
             // }
-            // try centroids.append(@Vector(2, f32){ 8, 9 });
-            // try centroids.append(@Vector(2, f32){ 2, 2 });
+            try centroids.append(@Vector(2, f32){ 8, 9 });
+            try centroids.append(@Vector(2, f32){ 2, 2 });
             var loops: u32 = 0;
             _ = loops;
             while (true) {

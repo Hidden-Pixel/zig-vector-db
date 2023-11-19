@@ -10,10 +10,10 @@ func main() {
 	// Initialize data
 	data := []kmeans.Point{
 		{1, 2},
-		// {1.5, 1.8},
-		// {2, 2},
-		// {8, 8},
-		// {8, 9},
+		{1.5, 1.8},
+		{2, 2},
+		{8, 8},
+		{8, 9},
 		{9, 11},
 	}
 
@@ -22,7 +22,7 @@ func main() {
 	// Perform KMeans
 	clusters, centroids := kmeans.KMeans(data, 2, .001)
 	_ = centroids
-	// fmt.Println("centroids", centroids)
+	fmt.Println("centroids", centroids)
 
 	// Print clusters
   fmt.Println("")

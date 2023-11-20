@@ -2,7 +2,6 @@ const std = @import("std");
 pub fn VecStore(comptime T: type) type {
     return struct {
         const This = @This();
-        // vectors: linked_list.LinkedList(T),
         vectors: std.ArrayList(T),
         allocator: *std.mem.Allocator,
         pub fn init(allocator: *std.mem.Allocator) This {
@@ -63,32 +62,50 @@ pub fn VecStore(comptime T: type) type {
             return n / result;
         }
 
+        pub fn pickRandomVectors(self: *This, comptime k: usize) ![k]T {
+            var returns: [k]T = undefined;
+            var x: u32 = 0;
+            var rnd_vecs: std.ArrayList(T) = std.ArrayList(T).init(self.allocator.*);
+            var randomIndices = std.AutoHashMap(usize, bool).init(self.allocator.*);
+            defer randomIndices.deinit();
+            defer rnd_vecs.deinit();
+            while (x < k) {
+                var idx: usize = 0;
+                var n: usize = std.crypto.random.intRangeAtMost(usize, 0, self.vectors.items.len - 1);
+
+                idx = n % self.vectors.items.len;
+                if (randomIndices.get(n) == null) {
+                    try randomIndices.put(n, true);
+                    std.debug.print("Choosing: {any}\n", .{self.vectors.items[n]});
+                    try rnd_vecs.append(self.vectors.items[n]);
+                    x += 1;
+                }
+            }
+
+            for (rnd_vecs.items, 0..) |item, i| {
+                returns[i] = item;
+            }
+            return returns;
+        }
+
         pub fn kmeans(self: *This, comptime k: usize, epsilon: f32) !void {
             var alloc = self.allocator.*;
             var centroids = std.ArrayList(T).init(alloc);
             var newCentroids = std.ArrayList(T).init(alloc);
-            defer centroids.deinit();
-            defer newCentroids.deinit();
-
-            for (0..k) |_| {
-                var idx: usize = 0;
-                var n: usize = std.crypto.random.intRangeAtMost(usize, 0, self.vectors.items.len);
-                if (n != 0) {
-                    idx = n % self.vectors.items.len;
-                    std.debug.print("{d}\n", .{idx});
-                    try centroids.append(self.vectors.items[idx]);
-                }
-            }
-            // for (0..k) |_| {
-            //     var rvec = generateRandomVectorf32(vec_dim);
-            //     var vec: T = rvec;
-            //     try centroids.append(vec);
-            // }
-            // try centroids.append(@Vector(2, f32){ 8, 9 });
-            // try centroids.append(@Vector(2, f32){ 2, 2 });
             // create clusters clusters is a list of centroids to a list of vectors (both are vector types)
             var clusters: std.ArrayList(std.ArrayList(T)) = std.ArrayList(std.ArrayList(T)).init(alloc);
             defer clusters.deinit();
+            defer centroids.deinit();
+            defer newCentroids.deinit();
+
+            var rnd_vector_seeds: [k]T = self.pickRandomVectors(k) catch |err| {
+                std.log.err("error picking random seed vectors {any}\n", .{err});
+                return;
+            };
+
+            for (rnd_vector_seeds) |rnd_vec| {
+                try centroids.append(rnd_vec);
+            }
 
             // Initialize the arraylists that will contain the vectors for each centroid
             for (0..k) |_| {
@@ -147,6 +164,7 @@ pub fn VecStore(comptime T: type) type {
         }
     };
 }
+
 test "kmeans" {
     std.debug.print("\n", .{});
     var test_allocator = std.testing.allocator;
@@ -161,6 +179,7 @@ test "kmeans" {
     try v.kmeans(2, 0.001);
     v.vectors.deinit();
 }
+
 fn generateRandomVectorf32(comptime n: usize) [n]f32 {
     var numbers: [n]f32 = undefined;
     var rnd = std.crypto.random;
@@ -169,4 +188,19 @@ fn generateRandomVectorf32(comptime n: usize) [n]f32 {
         val.* += rnd.float(f32);
     }
     return numbers;
+}
+
+test "get random vectors" {
+    std.debug.print("\n", .{});
+    var test_allocator = std.testing.allocator;
+    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
+    try v.add(@Vector(2, f32){ 1, 2 }, "meta");
+    try v.add(@Vector(2, f32){ 1.5, 1.8 }, "meta");
+    try v.add(@Vector(2, f32){ 2, 2 }, "meta");
+
+    try v.add(@Vector(2, f32){ 8, 8 }, "meta");
+    try v.add(@Vector(2, f32){ 8, 9 }, "meta");
+    try v.add(@Vector(2, f32){ 9, 11 }, "meta");
+    _ = try v.pickRandomVectors(2);
+    v.vectors.deinit();
 }

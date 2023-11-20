@@ -45,8 +45,7 @@ pub fn VecStore(comptime T: type) type {
             return best_match;
         }
 
-        pub fn add(self: *This, v: T, meta: []const u8) !void {
-            _ = meta;
+        pub fn add(self: *This, v: T ) !void {
             try self.vectors.append(v);
         }
 
@@ -113,7 +112,6 @@ pub fn VecStore(comptime T: type) type {
             }
             while (true) {
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
-                // var current_node = self.vectors.head;
                 for (self.vectors.items) |vec| {
                     // find the closest centroid for node (which contains our actual vector)
                     var belongsTo: usize = 0;
@@ -184,8 +182,8 @@ fn generateRandomVectorf32(comptime n: usize) [n]f32 {
     var numbers: [n]f32 = undefined;
     var rnd = std.crypto.random;
 
-    for (&numbers) |*val| {
-        val.* += rnd.float(f32);
+    for (numbers) |val| {
+        val += rnd.float(f32);
     }
     return numbers;
 }

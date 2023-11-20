@@ -71,7 +71,6 @@ pub fn VecStore(comptime T: type) type {
             var alloc = self.allocator.*;
             var centroids = std.ArrayList(T).init(alloc);
             var newCentroids = std.ArrayList(T).init(alloc);
-            // var finalGroupus =
             defer centroids.deinit();
             defer newCentroids.deinit();
             // var rng = std.crypto.random;
@@ -96,16 +95,15 @@ pub fn VecStore(comptime T: type) type {
             // }
             try centroids.append(@Vector(2, f32){ 8, 9 });
             try centroids.append(@Vector(2, f32){ 2, 2 });
-            var loops: u32 = 0;
-            _ = loops;
-            while (true) {
-                // create clusters clusters is a list of centroids to a list of vectors (both are vector types)
-                var clusters = std.ArrayList(std.ArrayList(T)).init(alloc);
+            // create clusters clusters is a list of centroids to a list of vectors (both are vector types)
+            var clusters = std.ArrayList(std.ArrayList(T)).init(alloc);
+            defer clusters.deinit();
 
-                // Initialize the arraylists that will contain the vectors for each centroid
-                for (0..k) |_| {
-                    try clusters.append(std.ArrayList(T).init(alloc));
-                }
+            // Initialize the arraylists that will contain the vectors for each centroid
+            for (0..k) |_| {
+                try clusters.append(std.ArrayList(T).init(alloc));
+            }
+            while (true) {
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 // var current_node = self.vectors.head;
                 for (self.vectors.items) |point| {
@@ -114,14 +112,12 @@ pub fn VecStore(comptime T: type) type {
                     var minDist: f32 = std.math.inf(f32);
                     for (centroids.items, 0..) |centro, i| {
                         var dist: f32 = distance(self, point, centro);
-                        // std.debug.print("centroid {any} point {any} dist {d}\n", .{ centro, point, dist });
                         if (dist < minDist) {
                             minDist = dist;
                             belongsTo = i;
                         }
                     }
                     try clusters.items[belongsTo].append(point);
-                    // current_node = point.next;
                 }
 
                 for (clusters.items) |cluster| {
@@ -138,13 +134,11 @@ pub fn VecStore(comptime T: type) type {
 
                 if (!moved) {
                     std.debug.print("Centroids: {any}\n", .{centroids.items});
-                    for (clusters.items) |c| {
-                        for (c.items) |a| {
-                            std.debug.print("Vectors: {any}\n", .{a});
-                        }
+                    for (clusters.items) |*c| {
+                        std.debug.print("TYPEOF {any}\n", .{@TypeOf(c)});
                         c.deinit();
                     }
-                    clusters.deinit();
+                    std.debug.print("\n", .{});
                     return;
                 }
 
@@ -154,20 +148,9 @@ pub fn VecStore(comptime T: type) type {
                 }
                 newCentroids.clearRetainingCapacity();
 
-                // loops += 1;
-                // if (loops > 1) {
-                //     clusters.deinit();
-                //     for (clusters.items) |c| {
-                //         c.deinit();
-                //     }
-                //     return;
-                // }
-                for (clusters.items) |c| {
-                    c.deinit();
+                for (clusters.items) |*c| {
+                    c.clearRetainingCapacity();
                 }
-                clusters.deinit();
-
-                // break;
             }
         }
     };

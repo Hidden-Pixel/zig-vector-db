@@ -7,7 +7,7 @@ pub fn VecStore(comptime T: type) type {
         allocator: *std.mem.Allocator,
         // VGroup: []VectorGroup,
 
-        // pub const VectorGroup = struct { centroid: T, members: std.ArrayList(T) };
+        pub const VectorGroup = struct { centroid: T, members: std.ArrayList(T) };
 
         pub fn init(allocator: *std.mem.Allocator) This {
             // var x: [25]VectorGroup = undefined;

@@ -1,13 +1,20 @@
 const std = @import("std");
+
 pub fn VecStore(comptime T: type) type {
     return struct {
         const This = @This();
         vectors: std.ArrayList(T),
         allocator: *std.mem.Allocator,
+        // VGroup: []VectorGroup,
+
+        // pub const VectorGroup = struct { centroid: T, members: std.ArrayList(T) };
+
         pub fn init(allocator: *std.mem.Allocator) This {
+            // var x: [25]VectorGroup = undefined;
             return .{
                 .vectors = std.ArrayList(T).init(allocator.*),
                 .allocator = allocator,
+                // .VGroup = &x,
             };
         }
 
@@ -45,12 +52,13 @@ pub fn VecStore(comptime T: type) type {
             return best_match;
         }
 
-        pub fn add(self: *This, v: T ) !void {
+        pub fn add(self: *This, v: T, meta: []const u8) !void {
+            _ = meta;
             try self.vectors.append(v);
         }
 
         // kmeans stuff
-        pub fn calc_centroid(self: *This, cluster: std.ArrayList(T)) T {
+        pub fn calculateCentroid(self: *This, cluster: std.ArrayList(T)) T {
             _ = self;
             var n: T = undefined;
             for (cluster.items) |point| {
@@ -61,21 +69,20 @@ pub fn VecStore(comptime T: type) type {
             return n / result;
         }
 
-        pub fn pickRandomVectors(self: *This, comptime k: usize) ![k]T {
-            var returns: [k]T = undefined;
+        pub fn pickRandomVectors(self: *This, comptime num_clusters: usize) ![num_clusters]T {
+            var returns: [num_clusters]T = undefined;
             var x: u32 = 0;
             var rnd_vecs: std.ArrayList(T) = std.ArrayList(T).init(self.allocator.*);
             var randomIndices = std.AutoHashMap(usize, bool).init(self.allocator.*);
             defer randomIndices.deinit();
             defer rnd_vecs.deinit();
-            while (x < k) {
+            while (x < num_clusters) {
                 var idx: usize = 0;
                 var n: usize = std.crypto.random.intRangeAtMost(usize, 0, self.vectors.items.len - 1);
 
                 idx = n % self.vectors.items.len;
                 if (randomIndices.get(n) == null) {
                     try randomIndices.put(n, true);
-                    std.debug.print("Choosing: {any}\n", .{self.vectors.items[n]});
                     try rnd_vecs.append(self.vectors.items[n]);
                     x += 1;
                 }
@@ -127,7 +134,7 @@ pub fn VecStore(comptime T: type) type {
                 }
 
                 for (clusters.items) |cluster| {
-                    try newCentroids.append(self.calc_centroid(cluster));
+                    try newCentroids.append(self.calculateCentroid(cluster));
                 }
 
                 var moved: bool = false;
@@ -178,16 +185,31 @@ test "kmeans" {
     v.vectors.deinit();
 }
 
-fn generateRandomVectorf32(comptime n: usize) [n]f32 {
-    var numbers: [n]f32 = undefined;
-    var rnd = std.crypto.random;
-
-    for (numbers) |val| {
-        val += rnd.float(f32);
-    }
-    return numbers;
+test "mapping" {
+    var test_allocator = std.testing.allocator;
+    var kmeans_groups = std.AutoHashMap(@Vector(2, u32), std.ArrayList(@Vector(2, u32))).init(test_allocator);
+    defer kmeans_groups.deinit();
+    var arr_list1 = std.ArrayList(@Vector(2, u32)).init(test_allocator);
+    try kmeans_groups.put(@Vector(2, u32){ 1337, 69 }, arr_list1);
 }
 
+test "centroid mappings" {
+    var test_allocator = std.testing.allocator;
+    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
+    _ = v;
+    var arr_list1 = std.ArrayList(@Vector(2, u32)).init(test_allocator);
+    _ = arr_list1;
+    // v.VGroup[0] = v.VectorGroup{
+    //     .centroid = @Vector(2, f32){ 1, 2 },
+    //     .members = arr_list1,
+    // };
+}
+// test "bitmap" {
+//     var vec: @Vector(2, f32) = @Vector(2, f32){ 1.0, 2.0 };
+//     var x = @as(@Vector(2, u32), vec);
+//     std.debug.print("u64: {x}\n", .{x});
+// }
+//
 test "get random vectors" {
     std.debug.print("\n", .{});
     var test_allocator = std.testing.allocator;
@@ -199,6 +221,18 @@ test "get random vectors" {
     try v.add(@Vector(2, f32){ 8, 8 }, "meta");
     try v.add(@Vector(2, f32){ 8, 9 }, "meta");
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
-    _ = try v.pickRandomVectors(2);
+    var points = try v.pickRandomVectors(2);
+    _ = points;
+
     v.vectors.deinit();
+}
+
+fn generateRandomVectorf32(comptime n: usize) [n]f32 {
+    var numbers: [n]f32 = undefined;
+    var rnd = std.crypto.random;
+
+    for (numbers) |val| {
+        val += rnd.float(f32);
+    }
+    return numbers;
 }

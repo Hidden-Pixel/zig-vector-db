@@ -1,23 +1,19 @@
 const std = @import("std");
-
+const L = @import("list.zig");
 pub fn VecStore(comptime T: type) type {
     return struct {
         const This = @This();
         vectors: std.ArrayList(T),
         allocator: *std.mem.Allocator,
-        // VGroup: []VectorGroup,
-
-        pub const VectorGroup = struct { centroid: T, members: std.ArrayList(T) };
 
         pub fn init(allocator: *std.mem.Allocator) This {
-            // var x: [25]VectorGroup = undefined;
             return .{
                 .vectors = std.ArrayList(T).init(allocator.*),
                 .allocator = allocator,
-                // .VGroup = &x,
             };
         }
 
+        // pub fn tester(self: *This, )
         pub fn dotProduct(self: *This, v1: T, v2: T) f32 {
             _ = self;
             return @as(f32, @floatCast(@reduce(.Add, v1 * v2)));
@@ -185,31 +181,28 @@ test "kmeans" {
     v.vectors.deinit();
 }
 
-test "mapping" {
-    var test_allocator = std.testing.allocator;
-    var kmeans_groups = std.AutoHashMap(@Vector(2, u32), std.ArrayList(@Vector(2, u32))).init(test_allocator);
-    defer kmeans_groups.deinit();
-    var arr_list1 = std.ArrayList(@Vector(2, u32)).init(test_allocator);
-    try kmeans_groups.put(@Vector(2, u32){ 1337, 69 }, arr_list1);
-}
+// test "mapping" {
+//     var test_allocator = std.testing.allocator;
+//     var kmeans_groups = std.AutoHashMap(@Vector(2, u32), std.ArrayList(@Vector(2, u32))).init(test_allocator);
+//     defer kmeans_groups.deinit();
+//     var arr_list1 = std.ArrayList(@Vector(2, u32)).init(test_allocator);
+//     try kmeans_groups.put(@Vector(2,  u32){ 1337, 69 }, arr_list1);
+// }
 
 test "centroid mappings" {
     var test_allocator = std.testing.allocator;
-    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
-    _ = v;
-    var arr_list1 = std.ArrayList(@Vector(2, u32)).init(test_allocator);
-    _ = arr_list1;
-    // v.VGroup[0] = v.VectorGroup{
-    //     .centroid = @Vector(2, f32){ 1, 2 },
-    //     .members = arr_list1,
-    // };
+    var vs = VecStore(@Vector(2, f32)).init(&test_allocator);
+    var centroid = @Vector(2, f32){ 1, 2 };
+    _ = vs;
+
+    _ = centroid;
+    var members = std.ArrayList(@Vector(2, f32)).init(test_allocator);
+    // std.debug.print("\n", .{});
+    // std.debug.print("cg type {any}\n", .{@TypeOf(cg)});
+    defer members.deinit();
+    // try v.tester(@Vector(2, f32){ 1, 2 }, arr_list1);
 }
-// test "bitmap" {
-//     var vec: @Vector(2, f32) = @Vector(2, f32){ 1.0, 2.0 };
-//     var x = @as(@Vector(2, u32), vec);
-//     std.debug.print("u64: {x}\n", .{x});
-// }
-//
+
 test "get random vectors" {
     std.debug.print("\n", .{});
     var test_allocator = std.testing.allocator;

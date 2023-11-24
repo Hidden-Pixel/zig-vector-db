@@ -65,6 +65,9 @@ pub fn VecStore(comptime T: type) type {
             const result: T = @splat(@floatFromInt(cluster.items.len));
             return n / result;
         }
+        pub fn cleanup(self: *This) void {
+            self.kmeans_groups.removeAll();
+        }
 
         pub fn pickRandomVectors(self: *This, comptime num_clusters: usize) ![num_clusters]T {
             var returns: [num_clusters]T = undefined;
@@ -90,7 +93,6 @@ pub fn VecStore(comptime T: type) type {
             }
             return returns;
         }
-
         pub fn kmeans(self: *This, comptime k: usize, epsilon: f32) !void {
             var alloc = self.allocator.*;
             var centroids = std.ArrayList(T).init(alloc);
@@ -114,6 +116,7 @@ pub fn VecStore(comptime T: type) type {
             for (0..k) |_| {
                 try clusters.append(std.ArrayList(T).init(alloc));
             }
+
             while (true) {
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 for (self.vectors.items) |vec| {
@@ -147,14 +150,18 @@ pub fn VecStore(comptime T: type) type {
                 // were done so clean up.
                 if (!moved) {
                     for (centroids.items, clusters.items) |centroid, clusters_items| {
-                        std.debug.print("Centroid: {any}\n", .{centroid});
-                        for (clusters_items.items) |a| {
-                            std.debug.print("\tMembers: {any}\n", .{a});
+                        // std.debug.print("Centroid: {any}\n", .{centroid});
+                        try self.kmeans_groups.append(centroid, clusters_items);
+                        for (clusters_items.items) |vector| {
+                            _ = vector;
+                            // std.debug.print("\tMembers: {any}\n", .{vector});
                         }
                     }
-                    for (clusters.items) |*c| {
-                        c.deinit();
-                    }
+
+                    // clean up all the individual clusters
+                    // for (clusters.items) |*c| {
+                    //     c.deinit();
+                    // }
                     return;
                 }
 
@@ -176,7 +183,27 @@ pub fn VecStore(comptime T: type) type {
     };
 }
 
-test "kmeans" {
+test "kmeans 3 groups 2 dims" {
+    var test_allocator = std.testing.allocator;
+    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
+    try v.add(@Vector(2, f32){ 1, 2 }, "meta");
+    try v.add(@Vector(2, f32){ 1.5, 1.8 }, "meta");
+    try v.add(@Vector(2, f32){ 2, 2 }, "meta");
+
+    try v.add(@Vector(2, f32){ 20, 24 }, "meta");
+    try v.add(@Vector(2, f32){ 19, 14 }, "meta");
+    try v.add(@Vector(2, f32){ 23, 22 }, "meta");
+
+    try v.add(@Vector(2, f32){ 8, 8 }, "meta");
+    try v.add(@Vector(2, f32){ 8, 9 }, "meta");
+    try v.add(@Vector(2, f32){ 9, 11 }, "meta");
+    try v.kmeans(3, 0.00001);
+    v.kmeans_groups.print();
+    v.cleanup();
+    v.vectors.deinit();
+}
+
+test "kmeans 2 groups 2 dims" {
     std.debug.print("\n", .{});
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
@@ -188,35 +215,52 @@ test "kmeans" {
     try v.add(@Vector(2, f32){ 8, 9 }, "meta");
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
     try v.kmeans(2, 0.001);
+    v.kmeans_groups.print();
+    v.cleanup();
     v.vectors.deinit();
 }
 
-test "centroid mappings" {
-    var test_allocator = std.testing.allocator;
-    var vs = VecStore(@Vector(2, f32)).init(&test_allocator);
-    defer vs.kmeans_groups.removeAll();
-    var centroid = @Vector(2, f32){ 1, 2 };
-    var members = std.ArrayList(@Vector(2, f32)).init(test_allocator);
-    defer members.deinit();
-    try vs.kmeans_groups.append(centroid, members);
-    vs.kmeans_groups.print();
-}
-
-test "get random vectors" {
+test "kmeans 2 groups 3 dims" {
+    const dims: usize = 3;
     std.debug.print("\n", .{});
     var test_allocator = std.testing.allocator;
-    var v = VecStore(@Vector(2, f32)).init(&test_allocator);
-    try v.add(@Vector(2, f32){ 1, 2 }, "meta");
-    try v.add(@Vector(2, f32){ 1.5, 1.8 }, "meta");
-    try v.add(@Vector(2, f32){ 2, 2 }, "meta");
+    var v = VecStore(@Vector(dims, f32)).init(&test_allocator);
+    try v.add(@Vector(dims, f32){ 1, 2, 3 }, "meta");
+    try v.add(@Vector(dims, f32){ 1.5, 1.8, 2.2 }, "meta");
+    try v.add(@Vector(dims, f32){ 2, 2, 3 }, "meta");
 
-    try v.add(@Vector(2, f32){ 8, 8 }, "meta");
-    try v.add(@Vector(2, f32){ 8, 9 }, "meta");
-    try v.add(@Vector(2, f32){ 9, 11 }, "meta");
-    var points = try v.pickRandomVectors(2);
-    _ = points;
+    try v.add(@Vector(dims, f32){ 8, 8, 9 }, "meta");
+    try v.add(@Vector(dims, f32){ 8, 9, 10 }, "meta");
+    try v.add(@Vector(dims, f32){ 9, 11, 13 }, "meta");
+    try v.kmeans(2, 0.001);
+    v.kmeans_groups.print();
+    v.cleanup();
     v.vectors.deinit();
 }
+//
+// test "centroid mappings" {
+//     var test_allocator = std.testing.allocator;
+//     var vs = VecStore(@Vector(2, f32)).init(&test_allocator);
+//     defer vs.kmeans_groups.removeAll();
+//     var centroid = @Vector(2, f32){ 1, 2 };
+//     var members = std.ArrayList(@Vector(2, f32)).init(test_allocator);
+//     try vs.kmeans_groups.append(centroid, members);
+// }
+//
+// test "get random vectors" {
+//     var test_allocator = std.testing.allocator;
+//     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
+//     try v.add(@Vector(2, f32){ 1, 2 }, "meta");
+//     try v.add(@Vector(2, f32){ 1.5, 1.8 }, "meta");
+//     try v.add(@Vector(2, f32){ 2, 2 }, "meta");
+//
+//     try v.add(@Vector(2, f32){ 8, 8 }, "meta");
+//     try v.add(@Vector(2, f32){ 8, 9 }, "meta");
+//     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
+//     var points = try v.pickRandomVectors(2);
+//     _ = points;
+//     v.vectors.deinit();
+// }
 
 fn generateRandomVectorf32(comptime n: usize) [n]f32 {
     var numbers: [n]f32 = undefined;

@@ -39,27 +39,28 @@ pub fn LinkedList(comptime T: type) type {
         }
 
         // Dequeues data from the queue and returns null if the queue
-        // is empty.
-        pub fn dequeue(self: *This) ?T {
-            // the statement below checks if self.head is null essentially
-            // and if it is, we just return null.
-            const head = self.head orelse return null;
-
-            defer self.allocator.destroy(head);
-            // if head has a next node, then swap head with next so we can
-            // dequeue the item
-            if (head.next) |next| {
-                self.head = next;
-            } else {
-                self.head = null;
-                self.tail = null;
-            }
-            return head.centroid;
-        }
-
+        // // is empty.
+        // pub fn dequeue(self: *This) ?T {
+        //     // the statement below checks if self.head is null essentially
+        //     // and if it is, we just return null.
+        //     const head = self.head orelse return null;
+        //
+        //     defer self.allocator.destroy(head);
+        //     // if head has a next node, then swap head with next so we can
+        //     // dequeue the item
+        //     if (head.next) |next| {
+        //         self.head = next;
+        //     } else {
+        //         self.head = null;
+        //         self.tail = null;
+        //     }
+        //     return head.centroid;
+        // }
+        //
         pub fn removeAll(self: *This) void {
             var current_node: ?*Node = self.head;
             while (current_node) |i| {
+                i.members.deinit();
                 current_node = i.next;
                 self.allocator.destroy(i);
             }
@@ -68,9 +69,11 @@ pub fn LinkedList(comptime T: type) type {
 
         pub fn print(self: *This) void {
             var current_node = self.head;
-            std.debug.print("\n", .{});
             while (current_node) |node| {
-                std.debug.print("value={any}\n", .{node.centroid});
+                std.debug.print("centroid {any}\n", .{node.centroid});
+                for (node.members.items) |member| {
+                    std.debug.print("\tmember {any}\n", .{member});
+                }
                 current_node = node.next;
             }
         }

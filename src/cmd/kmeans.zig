@@ -1,5 +1,6 @@
 const std = @import("std");
 const L = @import("list.zig");
+
 pub fn VecStore(comptime T: type) type {
     return struct {
         const This = @This();
@@ -54,7 +55,6 @@ pub fn VecStore(comptime T: type) type {
             try self.vectors.append(v);
         }
 
-        // kmeans stuff
         pub fn calculateCentroid(self: *This, cluster: std.ArrayList(T)) T {
             _ = self;
             var n: T = undefined;
@@ -117,7 +117,7 @@ pub fn VecStore(comptime T: type) type {
             while (true) {
                 // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 for (self.vectors.items) |vec| {
-                    // find the closest centroid for node (which contains our actual vector)
+                    // find the closest centroid for each vector (which contains our actual vector)
                     var belongsTo: usize = 0;
                     var minDist: f32 = std.math.inf(f32);
                     for (centroids.items, 0..) |centroid, idx| {
@@ -131,7 +131,8 @@ pub fn VecStore(comptime T: type) type {
                 }
 
                 for (clusters.items) |cluster| {
-                    try newCentroids.append(self.calculateCentroid(cluster));
+                    var centroid_for_cluster = self.calculateCentroid(cluster);
+                    try newCentroids.append(centroid_for_cluster);
                 }
 
                 var moved: bool = false;
@@ -143,22 +144,30 @@ pub fn VecStore(comptime T: type) type {
                 }
 
                 // if we did not move, then we have good enough centroids
-                // were done.
+                // were done so clean up.
                 if (!moved) {
-                    std.debug.print("Centroids: {any}\n", .{centroids.items});
+                    for (centroids.items, clusters.items) |centroid, clusters_items| {
+                        std.debug.print("Centroid: {any}\n", .{centroid});
+                        for (clusters_items.items) |a| {
+                            std.debug.print("\tMembers: {any}\n", .{a});
+                        }
+                    }
                     for (clusters.items) |*c| {
                         c.deinit();
                     }
-                    std.debug.print("\n", .{});
                     return;
                 }
 
+                // copy over the newly calculated centroids into the main centroids
+                // collection
                 centroids.clearRetainingCapacity();
                 for (newCentroids.items) |item| {
                     try centroids.append(item);
                 }
                 newCentroids.clearRetainingCapacity();
 
+                // clean up all clusters as well since we are going to re-calculate
+                // them all on the next loop
                 for (clusters.items) |*c| {
                     c.clearRetainingCapacity();
                 }
@@ -181,14 +190,6 @@ test "kmeans" {
     try v.kmeans(2, 0.001);
     v.vectors.deinit();
 }
-
-// test "mapping" {
-//     var test_allocator = std.testing.allocator;
-//     var kmeans_groups = std.AutoHashMap(@Vector(2, u32), std.ArrayList(@Vector(2, u32))).init(test_allocator);
-//     defer kmeans_groups.deinit();
-//     var arr_list1 = std.ArrayList(@Vector(2, u32)).init(test_allocator);
-//     try kmeans_groups.put(@Vector(2,  u32){ 1337, 69 }, arr_list1);
-// }
 
 test "centroid mappings" {
     var test_allocator = std.testing.allocator;
@@ -214,7 +215,6 @@ test "get random vectors" {
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
     var points = try v.pickRandomVectors(2);
     _ = points;
-
     v.vectors.deinit();
 }
 

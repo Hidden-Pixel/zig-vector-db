@@ -65,8 +65,10 @@ pub fn VecStore(comptime T: type) type {
             const result: T = @splat(@floatFromInt(cluster.items.len));
             return n / result;
         }
-        pub fn cleanup(self: *This) void {
+
+        pub fn deinit(self: *This) void {
             self.kmeans_groups.removeAll();
+            self.vectors.deinit();
         }
 
         pub fn pickRandomVectors(self: *This, comptime num_clusters: usize) ![num_clusters]T {
@@ -183,6 +185,20 @@ pub fn VecStore(comptime T: type) type {
     };
 }
 
+test "larger kmeans" {
+    const DIMS: usize = 3;
+    const GROUPS: usize = 4;
+    var test_allocator = std.testing.allocator;
+    var v = VecStore(@Vector(DIMS, f32)).init(&test_allocator);
+    for (0..50) |_| {
+        var vec: @Vector(DIMS, f32) = generateRandomVectorf32(DIMS);
+        try v.add(vec, "");
+    }
+    try v.kmeans(GROUPS, 0.01);
+    v.kmeans_groups.print();
+    v.deinit();
+}
+
 test "kmeans 3 groups 2 dims" {
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
@@ -199,12 +215,10 @@ test "kmeans 3 groups 2 dims" {
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
     try v.kmeans(3, 0.00001);
     v.kmeans_groups.print();
-    v.cleanup();
-    v.vectors.deinit();
+    v.deinit();
 }
 
 test "kmeans 2 groups 2 dims" {
-    std.debug.print("\n", .{});
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(2, f32)).init(&test_allocator);
     try v.add(@Vector(2, f32){ 1, 2 }, "meta");
@@ -216,13 +230,11 @@ test "kmeans 2 groups 2 dims" {
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
     try v.kmeans(2, 0.001);
     v.kmeans_groups.print();
-    v.cleanup();
-    v.vectors.deinit();
+    v.deinit();
 }
 
 test "kmeans 2 groups 3 dims" {
     const dims: usize = 3;
-    std.debug.print("\n", .{});
     var test_allocator = std.testing.allocator;
     var v = VecStore(@Vector(dims, f32)).init(&test_allocator);
     try v.add(@Vector(dims, f32){ 1, 2, 3 }, "meta");
@@ -234,8 +246,7 @@ test "kmeans 2 groups 3 dims" {
     try v.add(@Vector(dims, f32){ 9, 11, 13 }, "meta");
     try v.kmeans(2, 0.001);
     v.kmeans_groups.print();
-    v.cleanup();
-    v.vectors.deinit();
+    v.deinit();
 }
 //
 // test "centroid mappings" {
@@ -266,8 +277,8 @@ fn generateRandomVectorf32(comptime n: usize) [n]f32 {
     var numbers: [n]f32 = undefined;
     var rnd = std.crypto.random;
 
-    for (numbers) |val| {
-        val += rnd.float(f32);
+    for (&numbers) |*val| {
+        val.* = rnd.float(f32);
     }
     return numbers;
 }

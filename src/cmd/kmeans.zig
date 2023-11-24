@@ -5,15 +5,16 @@ pub fn VecStore(comptime T: type) type {
         const This = @This();
         vectors: std.ArrayList(T),
         allocator: *std.mem.Allocator,
+        kmeans_groups: L.LinkedList(T),
 
         pub fn init(allocator: *std.mem.Allocator) This {
             return .{
                 .vectors = std.ArrayList(T).init(allocator.*),
                 .allocator = allocator,
+                .kmeans_groups = L.LinkedList(T).init(allocator),
             };
         }
 
-        // pub fn tester(self: *This, )
         pub fn dotProduct(self: *This, v1: T, v2: T) f32 {
             _ = self;
             return @as(f32, @floatCast(@reduce(.Add, v1 * v2)));
@@ -192,15 +193,12 @@ test "kmeans" {
 test "centroid mappings" {
     var test_allocator = std.testing.allocator;
     var vs = VecStore(@Vector(2, f32)).init(&test_allocator);
+    defer vs.kmeans_groups.removeAll();
     var centroid = @Vector(2, f32){ 1, 2 };
-    _ = vs;
-
-    _ = centroid;
     var members = std.ArrayList(@Vector(2, f32)).init(test_allocator);
-    // std.debug.print("\n", .{});
-    // std.debug.print("cg type {any}\n", .{@TypeOf(cg)});
     defer members.deinit();
-    // try v.tester(@Vector(2, f32){ 1, 2 }, arr_list1);
+    try vs.kmeans_groups.append(centroid, members);
+    vs.kmeans_groups.print();
 }
 
 test "get random vectors" {

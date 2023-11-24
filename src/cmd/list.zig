@@ -24,7 +24,7 @@ pub fn LinkedList(comptime T: type) type {
         // Enqueues 'data' onto the queue.
         pub fn append(self: *This, centroid: T, members: std.ArrayList(T)) !void {
             const new_node = try self.allocator.create(Node);
-            new_node.* = Node{ .centroid = centroid, .members = members };
+            new_node.* = Node{ .centroid = centroid, .members = members, .next = null };
 
             // if the tail is not null, then make the current tail
             // point to the new node we are adding.

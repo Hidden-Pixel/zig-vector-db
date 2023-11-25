@@ -38,31 +38,13 @@ pub fn LinkedList(comptime T: type) type {
             self.tail = new_node;
         }
 
-        // Dequeues data from the queue and returns null if the queue
-        // // is empty.
-        // pub fn dequeue(self: *This) ?T {
-        //     // the statement below checks if self.head is null essentially
-        //     // and if it is, we just return null.
-        //     const head = self.head orelse return null;
-        //
-        //     defer self.allocator.destroy(head);
-        //     // if head has a next node, then swap head with next so we can
-        //     // dequeue the item
-        //     if (head.next) |next| {
-        //         self.head = next;
-        //     } else {
-        //         self.head = null;
-        //         self.tail = null;
-        //     }
-        //     return head.centroid;
-        // }
-        //
         pub fn removeAll(self: *This) void {
             var current_node: ?*Node = self.head;
-            while (current_node) |i| {
-                i.members.deinit();
-                current_node = i.next;
-                self.allocator.destroy(i);
+            while (current_node) |node| {
+                current_node = node.next;
+
+                node.members.deinit();
+                self.allocator.destroy(node);
             }
             self.head = null;
         }

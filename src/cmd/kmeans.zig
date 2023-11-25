@@ -29,7 +29,7 @@ pub fn VecStore(comptime T: type) type {
         pub fn magnitude(self: *This, v1: T) f32 {
             _ = self;
             var sum = @as(f32, @floatCast(@reduce(.Add, v1 * v1)));
-            var sqrt_sum = std.math.sqrt(sum);
+            var sqrt_sum = Q_sqrt(sum);
             return sqrt_sum;
         }
 
@@ -71,6 +71,7 @@ pub fn VecStore(comptime T: type) type {
             self.vectors.deinit();
         }
 
+        // TODO:(dean) This is a terrible function - clean it up sometime.
         pub fn pickRandomVectors(self: *This, comptime num_clusters: usize) ![num_clusters]T {
             var returns: [num_clusters]T = undefined;
             var x: u32 = 0;
@@ -110,12 +111,12 @@ pub fn VecStore(comptime T: type) type {
                 return;
             };
 
-            for (rnd_vector_seeds) |rnd_vec| {
+            inline for (rnd_vector_seeds) |rnd_vec| {
                 try centroids.append(rnd_vec);
             }
 
             // Initialize the arraylists that will contain the vectors for each centroid
-            for (0..k) |_| {
+            inline for (0..k) |_| {
                 try clusters.append(std.ArrayList(T).init(alloc));
             }
 
@@ -152,18 +153,9 @@ pub fn VecStore(comptime T: type) type {
                 // were done so clean up.
                 if (!moved) {
                     for (centroids.items, clusters.items) |centroid, clusters_items| {
-                        // std.debug.print("Centroid: {any}\n", .{centroid});
                         try self.kmeans_groups.append(centroid, clusters_items);
-                        for (clusters_items.items) |vector| {
-                            _ = vector;
-                            // std.debug.print("\tMembers: {any}\n", .{vector});
-                        }
                     }
 
-                    // clean up all the individual clusters
-                    // for (clusters.items) |*c| {
-                    //     c.deinit();
-                    // }
                     return;
                 }
 
@@ -186,16 +178,20 @@ pub fn VecStore(comptime T: type) type {
 }
 
 test "larger kmeans" {
-    const DIMS: usize = 3;
-    const GROUPS: usize = 4;
+    var t = std.time.milliTimestamp();
+    const DIMS: usize = 512;
+    const GROUPS: usize = 32;
     var test_allocator = std.testing.allocator;
+
     var v = VecStore(@Vector(DIMS, f32)).init(&test_allocator);
-    for (0..50) |_| {
+    for (0..20000) |_| {
         var vec: @Vector(DIMS, f32) = generateRandomVectorf32(DIMS);
         try v.add(vec, "");
     }
     try v.kmeans(GROUPS, 0.01);
-    v.kmeans_groups.print();
+    var end = std.time.milliTimestamp();
+    std.debug.print("kmeans time: {d}ms\n", .{end - t});
+    // v.kmeans_groups.print();
     v.deinit();
 }
 
@@ -228,7 +224,7 @@ test "kmeans 2 groups 2 dims" {
     try v.add(@Vector(2, f32){ 8, 8 }, "meta");
     try v.add(@Vector(2, f32){ 8, 9 }, "meta");
     try v.add(@Vector(2, f32){ 9, 11 }, "meta");
-    try v.kmeans(2, 0.001);
+    try v.kmeans(2, 0.01);
     v.kmeans_groups.print();
     v.deinit();
 }
@@ -281,4 +277,42 @@ fn generateRandomVectorf32(comptime n: usize) [n]f32 {
         val.* = rnd.float(f32);
     }
     return numbers;
+}
+pub fn Q_sqrt(number: f32) f32 {
+    var i: i32 = undefined;
+    var x2: f32 = undefined;
+    var y: f32 = undefined;
+    const threehalfs: f32 = 1.5;
+
+    x2 = number * 0.5;
+    y = number;
+    i = @as(i32, @bitCast(y));
+    i = 0x5f3759df - (i >> 1);
+    y = @as(f32, @bitCast(i));
+    y = y * (threehalfs - (x2 * y * y));
+
+    return 1 / y;
+}
+test "sqrt 4" {
+    var x = Q_sqrt(4);
+    std.debug.print("Q_sqrt 4 {d}\n", .{x});
+}
+test "sqrt 9" {
+    var x = Q_sqrt(9);
+    std.debug.print("Q_sqrt 9 {d}\n", .{x});
+}
+test "Q_sqrt" {
+    var t = std.time.milliTimestamp();
+    for (0..1000000) |i| {
+        _ = Q_sqrt(@as(f32, @floatFromInt(i)));
+    }
+    var end = std.time.milliTimestamp();
+    std.debug.print("\ntotal time fast sqrt: {d}\n", .{end - t});
+
+    t = std.time.milliTimestamp();
+    for (0..1000000) |i| {
+        _ = std.math.sqrt(i);
+    }
+    end = std.time.milliTimestamp();
+    std.debug.print("total time reg sqrt: {d}\n", .{end - t});
 }

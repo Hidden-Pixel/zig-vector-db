@@ -10,8 +10,8 @@ pub fn VecStore(comptime T: type) type {
 
         pub fn init(allocator: *std.mem.Allocator) This {
             return .{
-                .vectors = std.ArrayList(T).init(allocator.*),
                 .allocator = allocator,
+                .vectors = std.ArrayList(T).init(allocator.*),
                 .kmeans_groups = L.LinkedList(T).init(allocator),
             };
         }
@@ -96,41 +96,52 @@ pub fn VecStore(comptime T: type) type {
             }
             return returns;
         }
+
+        // k is the number of clusters to make
         pub fn kmeans(self: *This, comptime k: usize, epsilon: f32) !void {
             var alloc = self.allocator.*;
+
+            // centroids and newCentroids are are lists for the number of clusters.
+            // we have two because we swap from new to old and recalculate.
+            // these could probably be fix sized arrays.
             var centroids = std.ArrayList(T).init(alloc);
             var newCentroids = std.ArrayList(T).init(alloc);
+
             // create clusters clusters is a list of centroids to a list of vectors (both are vector types)
             var clusters: std.ArrayList(std.ArrayList(T)) = std.ArrayList(std.ArrayList(T)).init(alloc);
+
+            // clean ups
             defer clusters.deinit();
             defer centroids.deinit();
             defer newCentroids.deinit();
 
+            // this seens our kmeans clusters. we pick existing vectors randomly
+            // and try then as clusters since this is unsupervised in a sense.
             var rnd_vector_seeds: [k]T = self.pickRandomVectors(k) catch |err| {
                 std.log.err("error picking random seed vectors {any}\n", .{err});
                 return;
             };
 
-            inline for (rnd_vector_seeds) |rnd_vec| {
+            for (rnd_vector_seeds) |rnd_vec| {
                 try centroids.append(rnd_vec);
             }
 
             // Initialize the arraylists that will contain the vectors for each centroid
-            inline for (0..k) |_| {
+            for (0..k) |_| {
                 try clusters.append(std.ArrayList(T).init(alloc));
             }
 
+            // what this loop does is compare every point and see how close it is to every
+            // centroid and assign it to the closest one.
             while (true) {
-                // we traverse the linked list to look at every vector we have so we can assign it to a cluster
                 for (self.vectors.items) |vec| {
-                    // find the closest centroid for each vector (which contains our actual vector)
-                    var belongsTo: usize = 0;
+                    var belongsTo: usize = 0; // the index of the cluster we assign the vector to
                     var minDist: f32 = std.math.inf(f32);
-                    for (centroids.items, 0..) |centroid, idx| {
+                    for (centroids.items, 0..) |centroid, i| {
                         var dist: f32 = distance(self, vec, centroid);
                         if (dist < minDist) {
                             minDist = dist;
-                            belongsTo = idx;
+                            belongsTo = i;
                         }
                     }
                     try clusters.items[belongsTo].append(vec);
@@ -177,6 +188,28 @@ pub fn VecStore(comptime T: type) type {
     };
 }
 
+test "allocator" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    std.debug.print("\n", .{});
+    var allocator = arena.allocator();
+
+    var t = std.time.milliTimestamp();
+    const DIMS: usize = 2;
+    const GROUPS: usize = 3;
+
+    var v = VecStore(@Vector(DIMS, f32)).init(&allocator);
+    for (0..50) |_| {
+        var vec: @Vector(DIMS, f32) = generateRandomVectorf32(DIMS);
+        try v.add(vec, "");
+    }
+    try v.kmeans(GROUPS, 0.01);
+    var end = std.time.milliTimestamp();
+    std.debug.print("kmeans time: {d}ms\n", .{end - t});
+    v.kmeans_groups.print();
+    v.deinit();
+}
+
 test "larger kmeans" {
     var t = std.time.milliTimestamp();
     const DIMS: usize = 512;
@@ -184,7 +217,7 @@ test "larger kmeans" {
     var test_allocator = std.testing.allocator;
 
     var v = VecStore(@Vector(DIMS, f32)).init(&test_allocator);
-    for (0..20000) |_| {
+    for (0..5000) |_| {
         var vec: @Vector(DIMS, f32) = generateRandomVectorf32(DIMS);
         try v.add(vec, "");
     }

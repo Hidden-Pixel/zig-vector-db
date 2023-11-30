@@ -11,31 +11,21 @@ pub fn LinkedList(comptime T: type) type {
 
         allocator: *std.mem.Allocator,
         head: ?*Node,
-        tail: ?*Node,
+        len: usize,
 
         pub fn init(allocator: *std.mem.Allocator) This {
             return .{
                 .allocator = allocator,
                 .head = null,
-                .tail = null,
+                .len = 0,
             };
         }
 
-        // Enqueues 'data' onto the queue.
         pub fn append(self: *This, centroid: T, members: std.ArrayList(T)) !void {
-            const new_node = try self.allocator.create(Node);
-            new_node.* = Node{ .centroid = centroid, .members = members, .next = null };
-
-            // if the tail is not null, then make the current tail
-            // point to the new node we are adding.
-            // else the queue is empty so also set the head to
-            // the same node.
-            if (self.tail) |tail| {
-                tail.next = new_node;
-            } else {
-                self.head = new_node;
-            }
-            self.tail = new_node;
+            const new_node: *Node = try self.allocator.create(Node);
+            new_node.* = Node{ .centroid = centroid, .members = members, .next = self.head };
+            self.head = new_node;
+            self.len += 1;
         }
 
         pub fn removeAll(self: *This) void {
@@ -47,6 +37,7 @@ pub fn LinkedList(comptime T: type) type {
                 self.allocator.destroy(node);
             }
             self.head = null;
+            self.len = 0;
         }
 
         pub fn print(self: *This) void {

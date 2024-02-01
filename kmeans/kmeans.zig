@@ -22,14 +22,14 @@ pub fn VecStore(comptime T: type) type {
         }
 
         pub fn distance(self: *This, v1: T, v2: T) f32 {
-            var x: T = v2 - v1;
+            const x: T = v2 - v1;
             return magnitude(self, x);
         }
 
         pub fn magnitude(self: *This, v1: T) f32 {
             _ = self;
-            var sum = @as(f32, @floatCast(@reduce(.Add, v1 * v1)));
-            var sqrt_sum = Q_sqrt(sum);
+            const sum = @as(f32, @floatCast(@reduce(.Add, v1 * v1)));
+            const sqrt_sum = Q_sqrt(sum);
             return sqrt_sum;
         }
 
@@ -41,7 +41,7 @@ pub fn VecStore(comptime T: type) type {
             var best_match: f32 = 0;
             var current_node = self.vectors.head;
             while (current_node) |node| {
-                var cosine = self.cosineSim(v, node.data);
+                const cosine = self.cosineSim(v, node.data);
                 if (cosine > best_match) {
                     best_match = cosine;
                 }
@@ -81,7 +81,7 @@ pub fn VecStore(comptime T: type) type {
             defer rnd_vecs.deinit();
             while (x < num_clusters) {
                 var idx: usize = 0;
-                var n: usize = std.crypto.random.intRangeAtMost(usize, 0, self.vectors.items.len - 1);
+                const n: usize = std.crypto.random.intRangeAtMost(usize, 0, self.vectors.items.len - 1);
 
                 idx = n % self.vectors.items.len;
                 if (randomIndices.get(n) == null) {
@@ -99,7 +99,7 @@ pub fn VecStore(comptime T: type) type {
 
         // k is the number of clusters to make
         pub fn kmeans(self: *This, comptime k: usize, epsilon: f32) !void {
-            var alloc = self.allocator.*;
+            const alloc = self.allocator.*;
 
             // centroids and newCentroids are are lists for the number of clusters.
             // we have two because we swap from new to old and recalculate.
@@ -117,7 +117,7 @@ pub fn VecStore(comptime T: type) type {
 
             // this seens our kmeans clusters. we pick existing vectors randomly
             // and try then as clusters since this is unsupervised in a sense.
-            var rnd_vector_seeds: [k]T = self.pickRandomVectors(k) catch |err| {
+            const rnd_vector_seeds: [k]T = self.pickRandomVectors(k) catch |err| {
                 std.log.err("error picking random seed vectors {any}\n", .{err});
                 return;
             };
@@ -138,7 +138,7 @@ pub fn VecStore(comptime T: type) type {
                     var belongsTo: usize = 0; // the index of the cluster we assign the vector to
                     var minDist: f32 = std.math.inf(f32);
                     for (centroids.items, 0..) |centroid, i| {
-                        var dist: f32 = distance(self, vec, centroid);
+                        const dist: f32 = distance(self, vec, centroid);
                         if (dist < minDist) {
                             minDist = dist;
                             belongsTo = i;
@@ -148,7 +148,7 @@ pub fn VecStore(comptime T: type) type {
                 }
 
                 for (clusters.items) |cluster| {
-                    var centroid_for_cluster = self.calculateCentroid(cluster);
+                    const centroid_for_cluster = self.calculateCentroid(cluster);
                     try newCentroids.append(centroid_for_cluster);
                 }
 
@@ -194,35 +194,35 @@ test "allocator" {
     std.debug.print("\n", .{});
     var allocator = arena.allocator();
 
-    var t = std.time.milliTimestamp();
+    const t = std.time.milliTimestamp();
     const DIMS: usize = 2;
     const GROUPS: usize = 3;
 
     var v = VecStore(@Vector(DIMS, f32)).init(&allocator);
     for (0..50) |_| {
-        var vec: @Vector(DIMS, f32) = generateRandomVectorf32(DIMS);
+        const vec: @Vector(DIMS, f32) = generateRandomVectorf32(DIMS);
         try v.add(vec, "");
     }
     try v.kmeans(GROUPS, 0.01);
-    var end = std.time.milliTimestamp();
+    const end = std.time.milliTimestamp();
     std.debug.print("kmeans time: {d}ms\n", .{end - t});
     v.kmeans_groups.print();
     v.deinit();
 }
 
 test "larger kmeans" {
-    var t = std.time.milliTimestamp();
+    const t = std.time.milliTimestamp();
     const DIMS: usize = 512;
-    const GROUPS: usize = 32;
+    const GROUPS: usize = 4;
     var test_allocator = std.testing.allocator;
 
     var v = VecStore(@Vector(DIMS, f32)).init(&test_allocator);
-    for (0..5000) |_| {
-        var vec: @Vector(DIMS, f32) = generateRandomVectorf32(DIMS);
+    for (0..20000) |_| {
+        const vec: @Vector(DIMS, f32) = generateRandomVectorf32(DIMS);
         try v.add(vec, "");
     }
     try v.kmeans(GROUPS, 0.01);
-    var end = std.time.milliTimestamp();
+    const end = std.time.milliTimestamp();
     std.debug.print("kmeans time: {d}ms\n", .{end - t});
     // v.kmeans_groups.print();
     v.deinit();
@@ -327,11 +327,11 @@ pub fn Q_sqrt(number: f32) f32 {
     return 1 / y;
 }
 test "sqrt 4" {
-    var x = Q_sqrt(4);
+    const x = Q_sqrt(4);
     std.debug.print("Q_sqrt 4 {d}\n", .{x});
 }
 test "sqrt 9" {
-    var x = Q_sqrt(9);
+    const x = Q_sqrt(9);
     std.debug.print("Q_sqrt 9 {d}\n", .{x});
 }
 test "Q_sqrt" {

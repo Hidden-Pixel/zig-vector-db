@@ -3,12 +3,12 @@ const std = @import("std");
 // const VecStore = vecstore.VecStore;
 const port_num = 3000;
 
-pub fn start() !void {
+pub fn main() !void {
     var gpa_server = std.heap.GeneralPurposeAllocator(.{}){};
-    var gpa = gpa_server.allocator();
+    const gpa = gpa_server.allocator();
     //
     // var v = VecStore(@Vector(512, f32)).init(&gpa);
-    var opts: std.net.StreamServer.Options = std.net.StreamServer.Options{
+    const opts: std.net.StreamServer.Options = std.net.StreamServer.Options{
         .reuse_address = true,
     };
 
@@ -26,19 +26,23 @@ pub fn start() !void {
     defer thread_pool.deinit();
 
     while (true) {
-        var conn = try server.accept();
+        const conn = try server.accept();
         _ = thread_pool.spawn(handleConnection, .{conn}) catch |err| {
             std.debug.print("{any}", .{err});
         };
     }
 }
 
-// const s = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 11\n\nhello world";
+const s = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 11\n\nhello world";
 fn handleConnection(conn: std.net.StreamServer.Connection) void {
     var buf: [1024 * 1024]u8 = undefined;
     defer conn.stream.close();
 
     const n: usize = conn.stream.read(&buf) catch |err| {
+        std.log.err("{any}", .{err});
+        return;
+    };
+    _ = conn.stream.writeAll(s) catch |err| {
         std.log.err("{any}", .{err});
         return;
     };
@@ -53,11 +57,11 @@ fn handleConnection(conn: std.net.StreamServer.Connection) void {
             // some other message type
         },
         else => {
-            std.log.err("no such message type", .{});
+            // std.log.err("no such message type", .{});
         },
     }
 
-    std.log.debug("bytes read: {d} {s}", .{ n, std.fmt.fmtSliceHexLower(buf[0..n]) });
+    // std.log.debug("bytes read: {d} {s}", .{ n, std.fmt.fmtSliceHexLower(buf[0..n]) });
 }
 
 fn GetCosineSim(buf: []u8) void {

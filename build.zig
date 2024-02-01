@@ -23,8 +23,6 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const clap = b.dependency("httpz", .{});
-    exe.addModule("httpz", clap.module("httpz"));
     // exe.addLibraryPath(.{ .path = "src/kmeans" });
 
     // This declares intent for the executable to be installed into the
